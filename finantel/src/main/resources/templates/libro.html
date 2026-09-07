@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="panel-libro" id="panel-libro" class="panel">
+  <div class="sec-hdr">
+    <div><div class="sec-title">Libro Diario — Partida Doble</div><div class="sec-sub">MARZO 2026 · VERIFICACIÓN DE CUADRE AUTOMÁTICO</div></div>
+    <div class="btns-row">
+      <button class="btn-outline btn-sm" onclick="exportPDF()">📄 PDF</button>
+      <button class="btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button>
+    </div>
+  </div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+    <div class="kpi-card"><div class="kpi-lbl">Asientos del Mes</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Total Debe</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Total Haber</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Diferencia</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+  </div>
+  <div class="card">
+    <div class="card-body-0" style="overflow-x:auto;">
+      <div class="ldg-row ldg-hdr">
+        <span>📅 Fecha</span>
+        <span>📝 Descripción</span>
+        <span style="text-align:center">Cta.</span>
+        <span style="text-align:right">Debe (S/)</span>
+        <span style="text-align:right">Haber (S/)</span>
+        <span style="text-align:right">Saldo (S/)</span>
+      </div>
+      <div id="libro-entries"></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FINANTEL S.A.C. — Iniciar Sesión</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{--navy:#0a1628;--gold:#c9a84c;--gold-light:#e8c87a;--border:rgba(201,168,76,0.2);--text:#e2e8f0;--muted:#94a3b8;--red:#ef4444;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(201,168,76,.06) 0%,transparent 60%),linear-gradient(180deg,#0a1628 0%,#0d1f3c 100%);z-index:0;}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,.03) 1px,transparent 1px);background-size:40px 40px;z-index:0;}
+.login-box{position:relative;z-index:1;background:rgba(17,34,64,0.9);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.logo{text-align:center;margin-bottom:28px;}
+.logo-icon{width:56px;height:56px;background:linear-gradient(135deg,var(--gold),var(--gold-light));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 12px;box-shadow:0 0 24px rgba(201,168,76,.4);}
+.logo h1{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);}
+.logo p{font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:2px;margin-top:4px;}
+.alert-danger{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#fca5a5;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:16px;}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.fg label{font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:1px;}
+.fg label::after{content:' *';color:var(--red);}
+.fg input{background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:11px 14px;border-radius:8px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;outline:none;transition:border-color .2s,box-shadow .2s;}
+.fg input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.12);}
+.btn-gold{width:100%;background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#0a1628;border:none;padding:12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;margin-top:6px;transition:transform .2s,box-shadow .2s;}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,76,.4);}
+.hint{margin-top:16px;font-size:11px;color:var(--muted);text-align:center;font-family:'IBM Plex Mono',monospace;}
+</style>
+</head>
+<body>
+<div class="login-box">
+  <div class="logo">
+    <div class="logo-icon">⚖</div>
+    <h1>FINANTEL S.A.C.</h1>
+    <p>SISTEMA CONTABLE INTEGRAL</p>
+  </div>
+
+  <div th:if="${param.error}" class="alert-danger">
+    Correo o contraseña incorrectos
+  </div>
+
+  <form th:action="@{/login}" method="post">
+    <div class="fg">
+      <label>Correo Electrónico</label>
+      <input type="email" name="username" placeholder="usuario@finantel.pe" required/>
+    </div>
+    <div class="fg">
+      <label>Contraseña</label>
+      <input type="password" name="password" placeholder="••••••••" required/>
+    </div>
+    <button type="submit" class="btn-gold">Ingresar al Sistema →</button>
+  </form>
+
+  <div class="hint">Ingresa con las credenciales registradas en el sistema</div>
+</div>
+</body>
+</html>

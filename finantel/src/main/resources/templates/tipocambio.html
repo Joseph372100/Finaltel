@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+	<div th:fragment="panel-tipocambio" id="panel-tipocambio" class="panel">
+  <div class="sec-hdr"><div><div class="sec-title">Tipo de Cambio SBS</div><div class="sec-sub">ACTUALIZACIÓN AUTOMÁTICA DIARIA DESDE SBS</div></div><button class="btn-gold btn-sm" onclick="refreshTC()">🔄 Actualizar ahora</button></div>
+  <div class="alert alert-info">ℹ El tipo de cambio se actualiza manualmente o mediante la API SBS. Usa el botón "Actualizar ahora" para obtener valores vigentes.</div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+    <div class="kpi-card"><div class="kpi-lbl">USD / PEN</div><div class="kpi-val">—</div><div class="kpi-d down">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">EUR / PEN</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">MXN / PEN</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Última actualiz.</div><div class="kpi-val" style="font-size:16px;">09:00 AM</div><div class="kpi-d up">—</div></div>
+  </div>
+  <div class="card"><div class="card-hdr"><div class="card-title">📅 Historial Tipo de Cambio USD/PEN</div></div><div class="card-body-0" style="overflow-x:auto;"><table class="tbl">
+    <thead><tr><th>Fecha</th><th class="tr">Compra</th><th class="tr">Venta</th><th>Fuente</th><th>Estado</th></tr></thead>
+    <tbody></tbody>
+  </table></div></div>
+</div>
+</body>
+</html>

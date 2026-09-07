@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="panel-cuentas" id="panel-cuentas" class="panel">
+  <div class="sec-hdr">
+    <div><div class="sec-title">Plan de Cuentas</div><div class="sec-sub">CLASIFICACIÓN Y CONTROL DE CUENTAS ACTIVAS</div></div>
+    <div class="btns-row">
+      <button class="btn-gold btn-sm" onclick="nuevaCuenta()">+ Nueva Cuenta</button>
+    </div>
+  </div>
+  <div class="alert alert-warn">⚡ El sistema bloquea registros con <strong>cuentas inactivas</strong>. Ciertos tipos de operación solo admiten cuentas autorizadas.</div>
+  <div class="card"><div class="card-body-0" style="overflow-x:auto;">
+    <table class="tbl">
+      <thead><tr><th>Código</th><th>Descripción</th><th>Clasificación </th><th>Tipo</th><th>Estado</th><th>Ops. Autorizadas </th><th>Acciones</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div></div>
+</div>
+</body>
+</html>

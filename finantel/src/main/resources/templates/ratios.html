@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="panel-ratios" id="panel-ratios" class="panel">
+  <div class="sec-hdr"><div><div class="sec-title">Ratios Financieros</div><div class="sec-sub">INDICADORES SBS · T1 2026</div></div><div class="btns-row"><button class="btn-outline btn-sm" onclick="exportPDF()">📄 PDF</button></div></div>
+  <div class="card"><div class="card-hdr"><div class="card-title">💧 Liquidez</div></div><div class="card-body"><div class="ratio-grid">
+    <div class="ratio-card"><div class="ratio-name">Liquidez Corriente</div><div class="ratio-val" style="color:var(--green)">—</div><div class="ratio-bench">Meta: >1.5</div><div class="ratio-st st-ok">Sin datos</div></div>
+    <div class="ratio-card"><div class="ratio-name">Liquidez MN (SBS)</div><div class="ratio-val" style="color:var(--green)">—</div><div class="ratio-bench">Mín. SBS: 8%</div><div class="ratio-st st-ok">Sin datos</div></div>
+    <div class="ratio-card"><div class="ratio-name">Cobertura Depósitos</div><div class="ratio-val" style="color:var(--teal)">—</div><div class="ratio-bench">Meta: >20%</div><div class="ratio-st st-ok">Sin datos</div></div>
+  </div></div></div>
+  <div class="two-col">
+    <div class="card"><div class="card-hdr"><div class="card-title">📈 Rentabilidad</div></div><div class="card-body"><div class="ratio-grid">
+      <div class="ratio-card"><div class="ratio-name">ROA</div><div class="ratio-val" style="color:var(--teal)">—</div><div class="ratio-bench">Sector: 1.9%</div><div class="ratio-st st-ok">Sin datos</div></div>
+      <div class="ratio-card"><div class="ratio-name">ROE</div><div class="ratio-val" style="color:var(--green)">—</div><div class="ratio-bench">Sector: 11.5%</div><div class="ratio-st st-ok">Sin datos</div></div>
+      <div class="ratio-card"><div class="ratio-name">Margen Neto</div><div class="ratio-val" style="color:var(--gold)">—</div><div class="ratio-bench">Sector: 8.2%</div><div class="ratio-st st-ok">Sin datos</div></div>
+    </div></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">📋 Calidad de Cartera</div></div><div class="card-body"><div class="ratio-grid">
+      <div class="ratio-card"><div class="ratio-name">Morosidad</div><div class="ratio-val" style="color:#fbbf24">—</div><div class="ratio-bench">Meta: &lt;5%</div><div class="ratio-st st-warn">Sin datos</div></div>
+      <div class="ratio-card"><div class="ratio-name">Cobertura</div><div class="ratio-val" style="color:var(--green)">—</div><div class="ratio-bench">Meta: >50%</div><div class="ratio-st st-ok">Sin datos</div></div>
+      <div class="ratio-card"><div class="ratio-name">Castigados</div><div class="ratio-val" style="color:var(--green)">—</div><div class="ratio-bench">Sector: 0.8%</div><div class="ratio-st st-ok">Sin datos</div></div>
+    </div></div></div>
+  </div>
+</div>
+</body>
+</html>

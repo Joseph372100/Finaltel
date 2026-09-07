@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+	<div th:fragment="panel-costos" id="panel-costos" class="panel">
+  <div class="sec-hdr"><div><div class="sec-title">Costos y Presupuesto</div><div class="sec-sub">EJECUCIÓN PRESUPUESTAL T1 2026</div></div><div class="btns-row"><button class="btn-outline btn-sm" onclick="exportPDF()">📄 PDF</button><button class="btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button></div></div>
+  <div class="card"><div class="card-body-0" style="overflow-x:auto;">  <table class="tbl" style="table-layout:fixed;width:100%;">
+    <thead><tr><th>Centro de Costo</th><th class="tr">Presupuesto</th><th class="tr">Ejecutado</th><th class="tr">Variación</th><th class="tr">% Ejec.</th><th>Estado</th></tr></thead>
+    <tbody></tbody>
+  </table></div></div>
+</div>
+</body>
+</html>

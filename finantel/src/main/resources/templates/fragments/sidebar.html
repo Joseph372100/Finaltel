@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<nav th:fragment="sidebar" class="sidebar">
+  <div class="nav-section">Principal</div>
+  <div class="nav-item active" onclick="showPanel('dashboard',this)"><span class="icon">📊</span>Dashboard</div>
+
+  <div class="nav-section">Contabilidad</div>
+  <div class="nav-item" onclick="showPanel('asientos',this)"><span class="icon">📝</span>Asientos Contables</div>
+  <div class="nav-item" onclick="showPanel('libro',this)"><span class="icon">📒</span>Libro Diario</div>
+  <div class="nav-item" onclick="showPanel('cuentas',this)"><span class="icon">🗂</span>Plan de Cuentas</div>
+  <div class="nav-item" onclick="showPanel('periodos',this)"><span class="icon">📅</span>Periodos Contables</div>
+
+  <div class="nav-section">Reportes</div>
+  <div class="nav-item" onclick="showPanel('balance',this)"><span class="icon">🏦</span>Balance General</div>
+  <div class="nav-item" onclick="showPanel('resultados',this)"><span class="icon">📈</span>Estado Resultados</div>
+  <div class="nav-item" onclick="showPanel('flujo',this)"><span class="icon">💧</span>Flujo de Caja</div>
+  <div class="nav-item" onclick="showPanel('patrimonio',this)"><span class="icon">🏛</span>Patrimonio</div>
+  <div class="nav-item" onclick="showPanel('ratios',this)"><span class="icon">📐</span>Ratios Financieros</div>
+  <div class="nav-item" onclick="showPanel('costos',this)"><span class="icon">🔢</span>Costos y Presupuesto</div>
+
+  <div class="nav-section">Gestión</div>
+  <div class="nav-item" onclick="showPanel('comprobantes',this)"><span class="icon">🧾</span>Comprobantes</div>
+  <div class="nav-item" onclick="showPanel('alertas',this)"><span class="icon">🔔</span>Alertas <span class="nav-badge">0</span></div>
+  <div class="nav-item" onclick="showPanel('errores',this)"><span class="icon">⚠</span>Inconsistencias <span class="nav-badge">0</span></div>
+  <div class="nav-item" onclick="showPanel('importar',this)"><span class="icon">📥</span>Importar</div>
+  <div class="nav-item" onclick="showPanel('tipocambio',this)"><span class="icon">💱</span>Tipo de Cambio</div>
+
+  <div class="nav-section">Administración</div>
+  <div class="nav-item" onclick="showAdminPanel('sub-usuarios',this)"><span class="icon">👥</span>Usuarios y Roles</div>
+  <div class="nav-item" onclick="showAdminPanel('sub-auditoria',this)"><span class="icon">🔍</span>Auditoría</div>
+  <div class="nav-item" onclick="showAdminPanel('sub-respaldos',this)"><span class="icon">💾</span>Respaldos y BD</div>
+  <div class="nav-item" onclick="showAdminPanel('sub-configuracion',this)"><span class="icon">⚙</span>Configuración</div>
+  <div class="nav-item" onclick="showAdminPanel('sub-ayuda',this)"><span class="icon">❓</span>Ayuda</div>
+</nav>
+
+</body>
+</html>

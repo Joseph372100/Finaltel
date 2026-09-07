@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- admin -->
+<div th:fragment="panel-admin" id="panel-admin" class="panel">
+  <div class="sec-title">⚙ Administración</div>
+  <div class="sec-sub">GESTIÓN DEL SISTEMA · USUARIOS · AUDITORÍA · RESPALDOS</div>
+
+  <div class="admin-layout">
+    <!-- Usuarios -->
+    <div class="admin-sub" id="sub-usuarios">
+      <div class="card">
+        <div class="card-hdr" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>👥 Usuarios y Roles</span>
+          <button class="btn-gold btn-sm" onclick="openModalUsuario()">+ Nuevo Usuario</button>
+        </div>
+        <div class="card-body-0">
+          <table class="tbl">
+            <thead><tr><th>Nombre</th><th>Rol</th><th>Estado</th><th>Intentos</th><th>Último Acceso</th><th>Acciones</th></tr></thead>
+            <tbody><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auditoría -->
+    <div class="admin-sub" id="sub-auditoria">
+      <div class="card">
+        <div class="card-hdr" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>📋 Registro de Auditoría</span>
+          <button class="btn-outline btn-sm" onclick="exportAuditCSV()">⬇ Exportar CSV</button>
+        </div>
+		<div class="card-body">
+		  <div class="form-grid" style="margin-bottom:12px;">
+		    <div class="fg"><label>Usuario</label>
+		      <select id="aud-filtro-usuario" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;">
+		        <option>Todos los usuarios</option>
+		      </select>
+		    </div>
+		    <div class="fg"><label>Fecha Desde</label>
+		      <input type="date" id="aud-filtro-desde" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;"/>
+		    </div>
+		    <div class="fg"><label>Fecha Hasta</label>
+		      <input type="date" id="aud-filtro-hasta" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;"/>
+		    </div>
+		    <div class="fg"><label>Tipo de Acción</label>
+		      <select id="aud-filtro-accion" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;">
+		        <option>Todas</option><option>Creación</option><option>Edición</option><option>Anulación</option><option>Login</option>
+		      </select>
+		    </div>
+		  </div>
+		  <button class="btn-outline btn-sm" onclick="aplicarFiltrosAuditoria()">Filtrar</button>
+		</div>
+        <div class="card-body-0">
+          <table class="tbl">
+            <thead><tr><th>Fecha/Hora</th><th>Usuario</th><th>Acción</th><th>Objeto</th><th>Valor Anterior</th><th>Valor Nuevo</th></tr></thead>
+            <tbody><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Respaldos -->
+    <div class="admin-sub" id="sub-respaldos">
+      <div class="card">
+        <div class="card-hdr" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>💾 Respaldos del Sistema</span>
+          <button class="btn-gold btn-sm" onclick="crearRespaldo(this)">+ Respaldo Manual</button>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-success">✓ Respaldos automáticos activos</div>
+          <div style="display:flex;gap:16px;margin-bottom:12px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" onchange="toggleRespaldo('Diario',this.checked)"/> Diario 02:00 AM</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" onchange="toggleRespaldo('Semanal',this.checked)"/> Semanal 03:00 AM</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" onchange="toggleRespaldo('Mensual',this.checked)"/> Mensual 04:00 AM</label>
+          </div>
+        </div>
+        <div class="card-body-0">
+          <table class="tbl">
+            <thead><tr><th>Fecha</th><th>Tipo</th><th>Tamaño</th><th>Usuario</th><th>Estado</th><th>Acción</th></tr></thead>
+            <tbody><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configuración -->
+    <div class="admin-sub" id="sub-configuracion">
+      <div class="card">
+        <div class="card-hdr">⚙ Configuración del Sistema</div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+          <div class="form-grid-2">
+            <div class="fg"><label>Razón Social</label><input type="text" value="FINANTEL S.A.C."/></div>
+            <div class="fg"><label>RUC</label><input type="text" value="20110300971"/></div>
+            <div class="fg"><label>Dirección</label><input type="text" value="Av. Bolivia 258, Lima 15001"/></div>
+            <div class="fg"><label>Email</label><input type="email" value="contacto@finantel.pe"/></div>
+            <div class="fg"><label>Web</label><input type="text" value="www.finantel.pe"/></div>
+            <div class="fg"><label>Moneda</label>
+              <select><option>PEN — Sol Peruano</option><option>USD — Dólar</option></select>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" checked/> Aprobación doble para asientos mayores a S/ 50,000</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox" checked/> Alertas automáticas de vencimientos</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;"><input type="checkbox"/> OCR automático al adjuntar documentos</label>
+          </div>
+          <div><button class="btn-gold" onclick="guardarConfig()">Guardar Configuración</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ayuda -->
+    <div class="admin-sub" id="sub-ayuda">
+      <div class="card">
+        <div class="card-hdr">❓ Centro de Ayuda</div>
+        <div class="card-body">
+          <p style="color:var(--muted);font-size:13px;">Consulta la documentación del sistema o abre un ticket de soporte.</p>
+          <button class="btn-gold btn-sm" onclick="abrirTicketSoporte()">📮 Crear Ticket de Soporte</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

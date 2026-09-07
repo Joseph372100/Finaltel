@@ -1,0 +1,169 @@
+<!-- ASIENTOS (–) -->
+<div th:fragment="panel-asientos" id="panel-asientos" class="panel">
+  <div class="sec-hdr">
+    <div><div class="sec-title">Registro de Asientos Contables</div><div class="sec-sub"></div></div>
+    <div class="btns-row">
+      <button class="btn-outline btn-sm" onclick="aplicarFiltros()">🔍 Buscar</button>
+      <button class="btn-gold btn-sm" onclick="openNuevoAsiento()">+ Nuevo Asiento</button>
+    </div>
+  </div>
+
+  <div class="alert alert-info">ℹ Solo el <strong>Contador General</strong> puede aprobar operaciones . El sistema bloquea edición en periodos cerrados .</div>
+
+  <!-- Filtros  -->
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">🔍 Filtros de Búsqueda Avanzada</div></div>
+    <div class="card-body">
+      <div class="form-grid">
+		<div class="fg"><label>Fecha Desde</label><input type="date" id="f-desde"/></div>
+		<div class="fg"><label>Fecha Hasta</label><input type="date" id="f-hasta"/></div>
+        <div class="fg"><label>Cuenta Contable</label><input type="text" id="f-cuenta" placeholder="Ej: 1301 o descripción"/></div>
+        <div class="fg"><label>Monto</label><input type="number" id="f-monto" placeholder="Monto mínimo"/></div>
+        <div class="fg"><label>Usuario</label>
+          <select id="f-usuario"><option value="Todos">Todos</option></select>
+        </div>
+        <div class="fg"><label>Tipo de Asiento </label>
+          <select id="f-tipo"><option>Todos</option><option>Apertura</option><option>Operación ordinaria</option><option>Ajuste</option><option>Cierre</option><option>Reversión</option></select>
+        </div>
+        <div class="fg"><label>Estado</label>
+          <select id="f-estado"><option value="Todos">Todos</option><option>Activo</option><option>Anulado</option><option>Con error</option></select>
+        </div>
+        <div class="fg"><label>Periodo Contable</label>
+			<select id="f-periodo"><option value="">Todos</option></select>
+        </div>
+      </div>
+      <div class="btns-row" style="margin-top:14px;">
+        <button class="btn-gold btn-sm" onclick="aplicarFiltros()">Aplicar Filtros</button>
+        <button class="btn-outline btn-sm" onclick="limpiarFiltros()">✕ Limpiar</button>
+        <button class="btn-outline btn-sm" onclick="exportExcel()">📊 Exportar Excel</button>
+        <button class="btn-outline btn-sm" onclick="exportPDF()">📄 Exportar PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista asientos -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">📝 Asientos Contables — Marzo 2026</div>
+      <div style="display:flex;gap:8px;"><span class="badge b-green">0 activos</span><span class="badge b-red">0 con errores</span></div>
+    </div>
+    <div class="card-body-0" style="overflow-x:auto;">
+      <table class="tbl">
+        <thead><tr>
+          <th>N° Correl.</th><th>Fecha/Hora </th><th>Tipo </th><th>Descripción</th>
+          <th>Debe</th><th>Haber</th><th>Estado</th><th>Usuario </th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="asientos-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO ASIENTO -->
+<div th:fragment="modal-asiento" class="modal-overlay" id="modal-asiento">
+  <div class="modal" style="max-width:800px;">
+    <h3>Nuevo Asiento Contable</h3>
+    <div class="modal-sub"></div>
+
+    <div class="form-grid-3" style="margin-bottom:14px;">
+      <div class="fg">
+        <label>N° Correlativo </label>
+        <input type="text" id="asiento-correlativo" value="AST-2026-00249" readonly style="background:rgba(201,168,76,.08);color:var(--gold);"/>
+      </div>
+      <div class="fg">
+        <label>Fecha/Hora Creación </label>
+        <input type="text" id="asiento-fecha" readonly style="background:rgba(255,255,255,.04);color:var(--muted);"/>
+      </div>
+      <div class="fg">
+        <label>Periodo Contable </label>
+        <select><option>T1 2026 — Ene/Mar</option></select>
+      </div>
+    </div>
+
+    <div class="form-grid-2" style="margin-bottom:14px;">
+      <div class="fg">
+        <label class="field-req">Tipo de Asiento </label>
+        <select id="asiento-tipo" onchange="sugerirCuentas()">
+          <option value="">— Seleccionar —</option>
+		  <option value="Apertura">Apertura</option>
+		  <option value="Operación ordinaria">Desembolso de Crédito</option>
+		  <option value="Operación ordinaria">Captación Depósito</option>
+		  <option value="Operación ordinaria">Cobro de Cuota</option>
+		  <option value="Operación ordinaria">Pago Planilla</option>
+		  <option value="Operación ordinaria">Provisión Cartera</option>
+		  <option value="Ajuste">Ajuste</option>
+		  <option value="Cierre">Cierre</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="field-req">Descripción Predefinida </label>
+        <select id="asiento-desc">
+          <option value="">— Seleccionar o escribir —</option>
+          <option>Desembolso crédito MYPE</option>
+          <option>Captación depósito plazo</option>
+          <option>Cobro cuota crédito</option>
+          <option>Pago planilla mensual</option>
+          <option>Provisión cartera morosa</option>
+          <option>Amortización COFIDE</option>
+          <option>Devengamiento interés</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="sugerencia-cuentas" style="display:none;margin-bottom:12px;" class="alert alert-info">
+      💡 <strong>Sugerencia automática :</strong> <span id="sugerencia-text"></span>
+    </div>
+
+    <!-- Líneas del asiento -->
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">Partidas del Asiento ( — Partida Doble)</div>
+      <div class="asiento-line asiento-hdr">
+        <span>Cuenta Contable</span><span>Glosa</span><span class="tr">Debe (S/)</span><span class="tr">Haber (S/)</span><span></span>
+      </div>
+      <div id="asiento-lineas">
+        <div class="asiento-line">
+          <select style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;">
+            <option>1301 — Créditos Vigentes</option><option>1011 — Caja</option><option>2101 — Dep. Ahorro</option><option>5101 — Int. Créditos</option><option>4501 — Gastos Personal</option>
+          </select>
+          <input type="text" placeholder="Descripción de la partida" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;"/>
+          <input type="number" placeholder="0.00" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;text-align:right;" oninput="recalcTotals()"/>
+          <input type="number" placeholder="0.00" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;text-align:right;" oninput="recalcTotals()"/>
+          <button onclick="this.closest('.asiento-line').remove();recalcTotals();" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;">×</button>
+        </div>
+        <div class="asiento-line">
+          <select style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;">
+            <option>1011 — Caja</option><option>1301 — Créditos Vigentes</option><option>2101 — Dep. Ahorro</option><option>5101 — Int. Créditos</option><option>4501 — Gastos Personal</option>
+          </select>
+          <input type="text" placeholder="Descripción de la partida" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;"/>
+          <input type="number" placeholder="0.00" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;text-align:right;" oninput="recalcTotals()"/>
+          <input type="number" placeholder="0.00" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;text-align:right;" oninput="recalcTotals()"/>
+          <button onclick="this.closest('.asiento-line').remove();recalcTotals();" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;">×</button>
+        </div>
+      </div>
+      <button class="btn-outline btn-sm" style="margin-top:8px;" onclick="addAsientoLine()">+ Agregar línea</button>
+    </div>
+    <div style="display:flex;gap:16px;justify-content:flex-end;padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:14px;">
+      <span style="font-size:13px;font-family:'IBM Plex Mono',monospace;">Total Debe: <strong style="color:var(--green);" id="total-debe">S/ 0.00</strong></span>
+      <span style="font-size:13px;font-family:'IBM Plex Mono',monospace;">Total Haber: <strong style="color:var(--red-light);" id="total-haber">S/ 0.00</strong></span>
+      <span style="font-size:13px;font-family:'IBM Plex Mono',monospace;" id="cuadre-status">⚡ Diferencia: <strong style="color:#fbbf24;">S/ 0.00</strong></span>
+    </div>
+    <!-- Adjuntar documento   -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">Documento de Respaldo</div>
+      <label for="file-ocr-modal" class="ocr-zone" style="cursor:pointer;display:block;">
+        <div class="ocr-icon">📄</div>
+        <div class="ocr-text">Haz clic para seleccionar el comprobante, factura o voucher desde tu PC</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:'IBM Plex Mono',monospace;">PDF · JPG · PNG · Se mostrarán los datos del archivo seleccionado</div>
+      </label>
+      <input type="file" id="file-ocr-modal" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="processOCRModal(this)"/>
+      <div id="ocr-result" style="display:none;margin-top:10px;" class="alert alert-success"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('modal-asiento')">Cancelar</button>
+      <button class="btn-outline" onclick="duplicarAsiento()">📋 Duplicar </button>
+      <button class="btn-gold" onclick="guardarAsiento()">💾 Guardar Asiento</button>
+    </div>
+  </div>
+  </div>
+</body>
+	</html>

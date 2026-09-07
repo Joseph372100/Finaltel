@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<header th:fragment="header">
+  <div class="logo">
+    <div class="logo-icon">⚖</div>
+    <div>
+      <h1>FINANTEL S.A.C.</h1>
+      <p>Sistema Contable Integral · RUC 20110300971</p>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="tc-bar" id="tc-bar">💱 USD/PEN: cargando...</div>
+    <div class="live-b"><div class="live-dot"></div>EN LÍNEA</div>
+	<div class="user-badge" onclick="toggleUserMenu()" style="position:relative;">
+	  <div class="user-avatar" id="user-initials" th:text="${userInitials}">CG</div>
+	  <div>
+	    <div style="font-size:12px;" id="user-name-hdr" th:text="${userName}">María Quispe</div>
+	    <span class="role-chip" id="user-role-hdr" th:text="${userRol}">Contador General</span>
+	  </div>
+	  <div id="user-dropdown" style="display:none;position:absolute;top:110%;right:0;background:var(--navy-mid);border:1px solid var(--border);border-radius:8px;padding:8px;min-width:160px;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.4);">
+	    <a href="/logout" style="display:block;padding:8px 12px;color:var(--red);font-size:12px;text-decoration:none;border-radius:6px;font-family:'IBM Plex Sans',sans-serif;">🚪 Cerrar Sesión</a>
+	  </div>
+	</div>
+    </div>
+  </div>
+</header>
+</body>
+</html>

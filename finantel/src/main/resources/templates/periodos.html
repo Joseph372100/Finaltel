@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="panel-periodos" id="panel-periodos" class="panel">
+  <div class="sec-hdr">
+    <div><div class="sec-title">Periodos Contables</div><div class="sec-sub">DEFINICIÓN Y CONTROL DE PERIODOS</div></div>
+    <button class="btn-gold btn-sm" onclick="nuevoPeriodo()">+ Nuevo Periodo</button>
+  </div>
+  <div class="alert alert-warn">⚡ Los periodos <strong>cerrados</strong> no permiten edición ni eliminación de asientos. Solo el Contador General puede cerrar/abrir periodos.</div>
+  <div class="card"><div class="card-body-0">
+    <table class="tbl">
+      <thead><tr><th>Periodo</th><th>Inicio</th><th>Cierre</th><th>Estado</th><th>Asientos</th><th>Cerrado por</th><th>Acciones</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div></div>
+</div>
+</body>
+</html>
+ 

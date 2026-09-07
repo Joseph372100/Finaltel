@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="panel-resultados" id="panel-resultados" class="panel">
+  <div class="sec-hdr">
+    <div><div class="sec-title">Estado de Resultados</div><div class="sec-sub">INGRESOS Y GASTOS DEL PERIODO</div></div>
+    <div class="btns-row">
+      <button class="btn-outline btn-sm" onclick="exportPDF()">📄 PDF</button>
+      <button class="btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button>
+    </div>
+  </div>
+  <div class="card"><div class="card-body-0" style="overflow-x:auto;">
+    <table class="tbl">
+		<thead><tr><th style="width:100px;">Cta.</th><th>Descripción</th><th class="tr" style="width:120px;">Monto</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div></div>
+</div>
+</body>
+</html>

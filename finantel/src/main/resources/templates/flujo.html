@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+	<div th:fragment="panel-flujo" id="panel-flujo" class="panel">
+  <div class="sec-hdr"><div><div class="sec-title">Flujo de Caja</div><div class="sec-sub">MÉTODO DIRECTO · T1 2026</div></div><div class="btns-row"><button class="btn-outline btn-sm" onclick="exportPDF()">📄 PDF</button><button class="btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button></div></div>
+  <div class="two-col">
+    <div class="card"><div class="card-body-0"><table class="tbl">
+      <thead><tr><th>Descripción</th><th class="tr">S/</th></tr></thead>
+      <tbody></tbody>
+    </table></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">📊 Evolución Mensual de Caja</div></div><div class="card-body">
+      <div class="bar-chart">
+        <div class="bar-row"><div class="bar-lbl">Enero</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#c9a84c,#e8c87a)"></div></div><div class="bar-amt">S/ 0</div></div>
+        <div class="bar-row"><div class="bar-lbl">Febrero</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#c9a84c,#e8c87a)"></div></div><div class="bar-amt">S/ 0</div></div>
+        <div class="bar-row"><div class="bar-lbl">Marzo</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#22c55e,#86efac)"></div></div><div class="bar-amt">S/ 0</div></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+</body>
+</html>

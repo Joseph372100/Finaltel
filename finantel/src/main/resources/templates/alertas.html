@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="panel-alertas" id="panel-alertas" class="panel">
+  <div class="sec-hdr"><div><div class="sec-title">Centro de Alertas</div><div class="sec-sub">ALERTAS AUTOMÁTICAS DEL SISTEMA</div></div></div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+    <div class="kpi-card"><div class="kpi-lbl">Alertas Activas</div><div class="kpi-val" style="color:var(--red)">5</div><div class="kpi-d down">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Ctas. por Cobrar</div><div class="kpi-val">—</div><div class="kpi-d warn">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Ctas. por Pagar</div><div class="kpi-val">—</div><div class="kpi-d warn">—</div></div>
+    <div class="kpi-card"><div class="kpi-lbl">Inconsistencias</div><div class="kpi-val">—</div><div class="kpi-d down">—</div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;" id="alertas-container">
+    <div class="alert alert-info">ℹ Sin alertas activas en este momento.</div>
+  </div>
+</div>
+</body>
+</html>

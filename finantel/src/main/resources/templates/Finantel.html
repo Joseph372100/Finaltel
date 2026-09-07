@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<html lang="es"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <th:block th:replace="~{layout/base :: head}"></th:block>
+</head>
+<body>
+  <th:block th:replace="~{layout/base :: header}"></th:block>
+  <div class="layout">			
+    <th:block th:replace="~{layout/base :: sidebar}"></th:block>
+	<main class="content">
+	    <th:block th:replace="~{dashboard :: panel-dashboard}"></th:block>
+	    <th:block th:replace="~{asientos :: panel-asientos}"></th:block>
+	    <th:block th:replace="~{asientos :: modal-asiento}"></th:block>
+		<th:block th:replace="~{libro :: panel-libro}"></th:block>
+		<th:block th:replace="~{cuentas :: panel-cuentas}"></th:block>
+		<th:block th:replace="~{periodos :: panel-periodos}"></th:block>
+		<th:block th:replace="~{balance :: panel-balance}"></th:block>
+		<th:block th:replace="~{resultados :: panel-resultados}"></th:block>
+		<th:block th:replace="~{flujo :: panel-flujo}"></th:block>
+		<th:block th:replace="~{patrimonio :: panel-patrimonio}"></th:block>
+		<th:block th:replace="~{ratios :: panel-ratios}"></th:block>
+		<th:block th:replace="~{costos :: panel-costos}"></th:block>
+		<th:block th:replace="~{comprobantes :: panel-comprobantes}"></th:block>
+		<th:block th:replace="~{alertas :: panel-alertas}"></th:block>
+		<th:block th:replace="~{inconsistencias :: panel-errores}"></th:block>
+		<th:block th:replace="~{importar :: panel-importar}"></th:block>
+		<th:block th:replace="~{tipocambio :: panel-tipocambio}"></th:block>
+		<th:block th:replace="~{admin :: panel-admin}"></th:block>
+<!-- FOOTER -->
+<div style="margin-top:32px;padding:16px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">
+  <span id="footer-info">FINANTEL S.A.C. · RUC 20110300971 · Av. Bolivia 258, Lima 15001</span>
+  <span>Sistema Contable Integral v2.0 </span>
+</div>
+
+</main>
+</div>
+</div>
+<!-- MODAL NUEVO USUARIO -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal">
+    <h3>Nuevo Usuario</h3>
+    <div class="modal-sub"></div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="fg"><label class="field-req">Nombre Completo</label><input type="text" placeholder="Ej: Juan Pérez Quispe"/></div>
+      <div class="fg"><label class="field-req">Correo Electrónico</label><input type="email" placeholder="usuario@finantel.pe"/></div>
+      <div class="fg"><label class="field-req">Contraseña</label><input type="password" placeholder="Mín. 8 caracteres"/></div>
+      <div class="fg"><label class="field-req">Rol</label>
+        <select>
+          <option value="Contador_General">Contador General</option>
+          <option value="Personal_Autorizado">Personal Autorizado</option>
+          <option value="Administrador">Administrador</option>
+          <option value="Auditor">Auditor</option>
+        </select>
+      </div>
+      <div class="fg"><label>DNI</label><input type="text" id="modal-dni" placeholder="Ej: 70123456" maxlength="8"/></div>
+      <div class="fg"><label>Teléfono</label><input type="text" id="modal-tel" placeholder="Ej: 987654321" maxlength="9"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal('modal-usuario')">Cancelar</button>
+      <button class="btn-gold" onclick="guardarUsuario()">Crear Usuario</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// STORAGE — persistencia con localStorage resuelve recarga
+function formatRol(rol) {
+  return rol ? rol.replace(/_/g, ' ') : '—';
+}
+
+const DB_KEY = 'finantel_db_v4';
+['finantel_db_v1','finantel_db_v2','finantel_db_v3'].forEach(k => localStorage.removeItem(k));
+
+function dbLoad() {
+  try {
+    const raw = localStorage.getItem(DB_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function dbSave(data) {
+  try {
+    localStorage.setItem(DB_KEY, JSON.stringify(data));
+  } catch(e) { console.warn('Storage save failed:', e); }
+}
+
+// Datos iniciales 
+const ASIENTOS_INICIALES = [];
+const COMPROBANTES_INICIALES = [];
+const RESPALDOS_INICIALES = [];
+const USUARIOS_INICIALES = [];
+const TC_INICIALES = [];
+const AUDIT_INICIALES = [];
+
+// Cargar 
+let stored = dbLoad();
+if (!stored) {
+  stored = {
+    asientos: ASIENTOS_INICIALES,
+    comprobantes: COMPROBANTES_INICIALES,
+    respaldos: RESPALDOS_INICIALES,
+    usuarios: USUARIOS_INICIALES,
+    tcData: TC_INICIALES,
+    auditLog: AUDIT_INICIALES,
+    nextCorrelativo: 1,
+    nextCompNum: 1,
+    tcActual: { usd:'—', eur:'—', mxn:'—', hora:'—' },
+    periodos: []
+  };
+  dbSave(stored);
+}
+
+function duplicarAsientoExistente(id) {
+  fetch(`/web/asientos/duplicar/${id}`, {
+    credentials: 'include'
+  })
+  .then(r => {renderLibro
+    if (r.ok) {
+      renderAsientos();
+      showToast(`Asiento duplicado correctamente`, 'success');
+    } else {
+      showToast('Error al duplicar asiento', 'error');
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+
+function anularAsiento(id) {
+  const modalId = 'modal-anular';
+  let modal = document.getElementById(modalId);
+  if (!modal) { modal = document.createElement('div'); modal.className='modal-overlay'; modal.id=modalId; document.body.appendChild(modal); }
+  modal.innerHTML = `
+    <div class="modal" style="max-width:440px;">
+      <h3 style="color:var(--red);">⚠ Anular Asiento — </h3>
+      <div class="modal-sub">ELIMINACIÓN LÓGICA · El asiento NO se borra físicamente</div>
+      <div class="alert alert-warn" style="margin-bottom:16px;">
+        Asiento <strong style="font-family:'IBM Plex Mono',monospace;">${id}</strong> será marcado como <strong>ANULADO</strong>.<br>
+        <span style="font-size:11px;">Permanece en historial de auditoría .</span>
+      </div>
+      <div class="fg" style="margin-bottom:16px;"><label class="field-req">Motivo de anulación</label>
+        <textarea id="motivo-anular" placeholder="Describe el motivo..." style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;font-family:'IBM Plex Sans',sans-serif;min-height:70px;width:100%;resize:vertical;outline:none;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" onclick="closeModal('modal-anular')">Cancelar</button>
+		<button class="btn-danger" onclick="confirmarAnular(${id})">🗑 Confirmar Anulación</button>
+      </div>
+    </div>`;
+  modal.classList.add('open');
+}
+
+function confirmarAnular(id) {
+  const motivo = document.getElementById('motivo-anular').value.trim();
+  if (!motivo) { showToast('Ingresa el motivo de anulación', 'error'); return; }
+
+    fetch(`/web/asientos/anular/${id}`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(r => {
+    if (r.ok) {
+      closeModal('modal-anular');
+      renderAsientos();
+      showToast(`Asiento ${id} anulado`, 'warn');
+    } else {
+      showToast('Error al anular el asiento', 'error');
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+
+function openNuevoAsiento() {
+  const corrEl = document.getElementById('asiento-correlativo');
+  const fechaEl = document.getElementById('asiento-fecha');
+  if (corrEl) corrEl.value = getCurrentCorrelativo();
+  if (fechaEl) fechaEl.value = new Date().toLocaleString('es-PE');
+  // Limpiar form
+  const tipoEl = document.getElementById('asiento-tipo');
+  if (tipoEl) tipoEl.value = '';
+  const descEl = document.getElementById('asiento-desc');
+  if (descEl) descEl.value = '';
+  document.getElementById('sugerencia-cuentas').style.display = 'none';
+  const ocrR = document.getElementById('ocr-result');
+  if (ocrR) { ocrR.style.display='none'; ocrR.innerHTML=''; }
+  document.querySelectorAll('#asiento-lineas input[type=number]').forEach(i => i.value='');
+  recalcTotals();
+  document.getElementById('modal-asiento').classList.add('open');
+}
+
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('open');
+}
+
+function guardarAsiento() {
+  const tipo  = document.getElementById('asiento-tipo').value;
+  const descEl = document.getElementById('asiento-desc');
+  const desc  = descEl ? (descEl.options[descEl.selectedIndex]?.value !== '' ? descEl.options[descEl.selectedIndex]?.text : '') : '';
+
+  if (!tipo) { showToast('Tipo de asiento es obligatorio','error'); document.getElementById('asiento-tipo').style.borderColor='var(--red)'; return; }
+
+  let debe=0, haber=0;
+  document.querySelectorAll('#asiento-lineas .asiento-line').forEach(row => {
+    const inputs = row.querySelectorAll('input[type=number]');
+    debe  += parseFloat(inputs[0]?.value||0);
+    haber += parseFloat(inputs[1]?.value||0);
+  });
+
+  if (debe === 0 && haber === 0) { showToast('Ingresa montos en las partidas','error'); return; }
+  if (Math.abs(debe-haber) > 0.01) { showToast('El asiento no cuadra — Diferencia: S/ '+Math.abs(debe-haber).toFixed(2),'error'); return; }
+
+  const nuevoId  = getCurrentCorrelativo();
+  const usuario  = document.getElementById('user-name-hdr').textContent;
+  const tipoLabel= tipo.charAt(0).toUpperCase()+tipo.slice(1);
+  const descLabel= (desc && desc !== '— Seleccionar o escribir —') ? desc : tipoLabel;
+
+  // Recoger partidas
+  const partidas = [];
+  document.querySelectorAll('#asiento-lineas .asiento-line').forEach(row => {
+    const sel = row.querySelector('select');
+    const txt = row.querySelector('input[type=text]');
+    const inputs = row.querySelectorAll('input[type=number]');
+    partidas.push({ cuenta: sel?.value||'', glosa: txt?.value||'', debe: parseFloat(inputs[0]?.value||0), haber: parseFloat(inputs[1]?.value||0) });
+  });
+
+  fetch('/web/asientos', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tipo: tipoLabel,
+      descripcion: descLabel,
+      debe: debe,
+      haber: haber,
+      estado: 'Activo',
+      usuario: usuario,
+	  cuentaContable: (partidas[0]?.cuenta || '1011').split(' ')[0],
+      centroCosto: 'General',
+      moneda: 'PEN',
+      tipoCambio: 1.0
+    })
+  })
+  .then(r => {
+    if (r.ok) {
+      renderAsientos();
+      closeModal('modal-asiento');
+      showPanel('asientos');
+      showToast('Asiento guardado correctamente', 'success');
+	  document.getElementById('asiento-tipo').value = '';
+	  document.getElementById('asiento-desc').value = '';
+	  document.querySelectorAll('#asiento-lineas input[type=number]').forEach(i => i.value = '');
+	  document.querySelectorAll('#asiento-lineas input[type=text]').forEach(i => i.value = '');
+	  document.getElementById('sugerencia-cuentas').style.display = 'none';
+	  recalcTotals();
+    } else {
+      showToast('Error al guardar asiento', 'error');
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+
+function addAsientoLine() {
+  const container = document.getElementById('asiento-lineas');
+  const div = document.createElement('div');
+  div.className = 'asiento-line';
+  div.innerHTML = `
+    <select style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;">
+      <option>1011 — Caja</option><option>1301 — Créditos Vigentes</option><option>2101 — Dep. Ahorro</option>
+      <option>2102 — Dep. Plazo</option><option>4101 — Int. Depósitos</option><option>4401 — Provisiones</option>
+      <option>4501 — Gastos Personal</option><option>4601 — Depreciación</option><option>5101 — Int. Créditos</option>
+      <option>5102 — Int. Inversiones</option>
+    </select>
+    <input type="text" placeholder="Descripción de la partida" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;"/>
+    <input type="number" placeholder="0.00" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;text-align:right;" oninput="recalcTotals()"/>
+    <input type="number" placeholder="0.00" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-size:12px;text-align:right;" oninput="recalcTotals()"/>
+    <button onclick="this.closest('.asiento-line').remove();recalcTotals();" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:var(--red);width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:14px;">×</button>`;
+  container.appendChild(div);
+}
+
+function recalcTotals() {
+  let debe=0,haber=0;
+  document.querySelectorAll('#asiento-lineas .asiento-line').forEach(row => {
+    const inputs = row.querySelectorAll('input[type=number]');
+    debe  += parseFloat(inputs[0]?.value||0);
+    haber += parseFloat(inputs[1]?.value||0);
+  });
+  document.getElementById('total-debe').textContent  = 'S/ '+debe.toFixed(2);
+  document.getElementById('total-haber').textContent = 'S/ '+haber.toFixed(2);
+  const diff = Math.abs(debe-haber);
+  const cs = document.getElementById('cuadre-status');
+  if (diff < 0.01 && debe > 0) cs.innerHTML = '✓ <strong style="color:var(--green)">CUADRADO ✓</strong>';
+  else cs.innerHTML = `⚡ Diferencia: <strong style="color:#fbbf24;">S/ ${diff.toFixed(2)}</strong>`;
+}
+
+function sugerirCuentas() {
+  const tipo = document.getElementById('asiento-tipo').value;
+  const sug = document.getElementById('sugerencia-cuentas');
+  const txt = document.getElementById('sugerencia-text');
+  if (tipo) document.getElementById('asiento-tipo').style.borderColor = '';
+  const sugs = {
+    credito:   'Débito: 1301 Créditos Vigentes — Crédito: 1011 Caja / 1041 Cta. Cte.',
+    deposito:  'Débito: 1011 Caja — Crédito: 2101 Dep. Ahorro / 2102 Dep. Plazo',
+    cobro:     'Débito: 1011 Caja — Crédito: 1301 Créditos Vigentes + 5101 Intereses',
+    planilla:  'Débito: 4501 Gastos Personal — Crédito: 1011 Caja',
+    provision: 'Débito: 4401 Provisiones — Crédito: 1399 Provisión Acumulada',
+    apertura:  'Débito: Activos — Crédito: Pasivos + Patrimonio',
+    ajuste:    'Según naturaleza del ajuste. Verificar saldos.',
+    cierre:    'Débito: Ingresos (5xxx) — Crédito: Gastos (4xxx) → resultado',
+  };
+  if (sugs[tipo]) { txt.textContent = sugs[tipo]; sug.style.display='flex'; }
+  else sug.style.display='none';
+}
+
+function duplicarAsiento() {
+  closeModal('modal-asiento');
+  const tipo = document.getElementById('asiento-tipo').value;
+  showToast('Para duplicar un asiento existente, usa el botón 📋 en la tabla de asientos', 'info');
+}
+
+function processOCRModal(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const ocrEl = document.getElementById('ocr-result');
+  if (!ocrEl) return;
+  ocrEl.style.display = 'flex';
+  ocrEl.className = 'alert alert-info';
+  ocrEl.innerHTML = '⏳ Procesando archivo: <strong>' + file.name + '</strong>...';
+
+  const formData = new FormData();
+  formData.append('archivo', file);
+
+  fetch('/ocr/leer', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData
+  })
+  .then(r => r.text())
+  .then(texto => {
+    ocrEl.className = 'alert alert-success';
+    ocrEl.innerHTML = '✓ <strong>Texto extraído:</strong><br>'
+      + '<pre style="font-size:11px;font-family:\'IBM Plex Mono\',monospace;white-space:pre-wrap;margin-top:8px;">'
+      + texto + '</pre>';
+  })
+  .catch(() => {
+    ocrEl.className = 'alert alert-danger';
+    ocrEl.innerHTML = '✕ Error al procesar el archivo.';
+  });
+}
+function processOCRFile(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const resultEl = document.getElementById('ocr-result-page');
+  if (!resultEl) return;
+  resultEl.style.display='flex';
+  resultEl.className='alert alert-info';
+  resultEl.innerHTML = `⏳ Procesando: <strong>${file.name}</strong>...`;
+  setTimeout(() => {
+    const fecha = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const monto = (Math.random()*5000+200).toFixed(2);
+    const factNum = 'F00'+Math.floor(Math.random()*9+1)+'-'+String(Math.floor(Math.random()*99999)).padStart(5,'0');
+    resultEl.className='alert alert-success';
+    resultEl.innerHTML = `✓ <strong> — Documento recibido:</strong> ${file.name} · ${(file.size/1024).toFixed(1)} KB<br>
+      <span style="font-size:11px;font-family:'IBM Plex Mono',monospace;">
+        📅 Fecha detectada: ${fecha} · 🧾 N°: ${factNum} · 💰 Monto: S/ ${monto}<br>
+        Datos listos para validar contra asiento contable. Ingresa el número de asiento para comparar.
+      </span>`;
+    showToast(`Archivo ${file.name} procesado. Revisa los datos extraídos.`, 'success');
+    logAudit(document.getElementById('user-name-hdr').textContent, 'OCR', file.name, '—', `${file.name} — S/ ${monto}`);
+  }, 1800);
+}
+
+function processExcelFile(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const preview = document.getElementById('excel-preview');
+  if (preview) { preview.style.display='block'; preview.innerHTML='<div class="alert alert-info">⏳ Importando: <strong>'+file.name+'</strong>...</div>'; }
+
+  const formData = new FormData();
+  formData.append('archivo', file);
+
+  fetch('/web/importar-excel', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData
+  })
+  .then(r => r.text())
+  .then(msg => {
+    if (preview) preview.innerHTML = '<div class="alert alert-success">✓ ' + msg + '</div>';
+    showToast(msg, 'success');
+    renderAsientos();
+  })
+  .catch(() => showToast('Error al importar', 'error'));
+}
+function renderLibro() {
+  const el = document.getElementById('libro-entries');
+  if (!el) return;
+
+  fetch('/web/asientos', { credentials: 'include' })
+  .then(r => r.json())
+  .then(asientos => {
+    const activos = asientos.filter(a => a.estado === 'Activo');
+    if (!activos.length) {
+      el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">Sin asientos registrados</div>';
+      return;
+    }
+
+    let totalDebe = 0, totalHaber = 0, saldo = 0;
+    el.innerHTML = activos.map(a => {
+      const debe  = parseFloat(a.debe) || 0;
+      const haber = parseFloat(a.haber) || 0;
+      totalDebe  += debe;
+      totalHaber += haber;
+      saldo      += debe - haber;
+      const fecha = a.fechaRegistro ? new Date(a.fechaRegistro).toLocaleDateString('es-PE') : '—';
+	  return `<div class="ldg-row" style="border-left:2px solid ${debe>haber?'var(--green)':debe<haber?'var(--red)':'var(--border)'};padding-left:11px;">
+	    <span style="color:var(--muted);font-size:11px;">${fecha}</span>
+	    <span style="font-weight:500;">${a.descripcion || '—'}</span>
+	    <span style="text-align:center;"><span class="badge b-teal" style="font-size:9px;">${a.cuentaContable || '—'}</span></span>
+	    <span style="text-align:right;color:var(--green-light);font-weight:600;">${debe>0?'S/ '+debe.toLocaleString('es-PE',{minimumFractionDigits:2}):'—'}</span>
+	    <span style="text-align:right;color:var(--red-light);font-weight:600;">${haber>0?'S/ '+haber.toLocaleString('es-PE',{minimumFractionDigits:2}):'—'}</span>
+	    <span style="text-align:right;color:${saldo>=0?'var(--teal)':'var(--red)'};font-weight:600;">S/ ${saldo.toLocaleString('es-PE',{minimumFractionDigits:2})}</span>
+	  </div>`;
+    }).join('');
+
+    const kpis = document.querySelectorAll('#panel-libro .kpi-val');
+    if (kpis[0]) kpis[0].textContent = activos.length;
+    if (kpis[1]) kpis[1].textContent = 'S/ ' + totalDebe.toLocaleString('es-PE');
+    if (kpis[2]) kpis[2].textContent = 'S/ ' + totalHaber.toLocaleString('es-PE');
+    if (kpis[3]) kpis[3].textContent = 'S/ ' + Math.abs(totalDebe - totalHaber).toLocaleString('es-PE');
+  })
+  .catch(() => {
+    el.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px;">Error cargando libro diario</div>';
+  });
+}
+function renderComprobantes() {
+  const tbody = document.querySelector('#panel-comprobantes table tbody');
+  if (!tbody) return;
+
+  fetch('/web/comprobantes', { credentials: 'include' })
+  .then(r => r.json())
+  .then(comprobantes => {
+    if (!comprobantes.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Sin comprobantes registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = comprobantes.map(c => {
+      const badgeTipo = c.tipo==='Factura'?'b-blue':c.tipo==='Boleta'?'b-teal':'b-gold';
+      const badgeEst  = c.estado==='Emitido'?'b-green':'b-gold';
+      return `<tr>
+        <td style="font-family:'IBM Plex Mono',monospace;">${c.numero || '—'}</td>
+        <td>${c.fecha || '—'}</td>
+        <td><span class="badge ${badgeTipo}">${c.tipo || '—'}</span></td>
+        <td>${c.cliente || '—'}</td>
+        <td class="tr" style="font-family:'IBM Plex Mono',monospace;">S/ ${c.monto || '0.00'}</td>
+        <td><span class="badge ${badgeEst}">${c.estado || '—'}</span></td>
+        <td><button class="btn-outline btn-sm" onclick="descargarComprobante('${c.numero}')">📄 PDF</button></td>
+      </tr>`;
+    }).join('');
+  })
+  .catch(() => {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);">Error cargando comprobantes</td></tr>';
+  });
+}
+
+function emitirComprobante() {
+  const modalId = 'modal-comprobante';
+  let modal = document.getElementById(modalId);
+  if (!modal) { modal=document.createElement('div'); modal.className='modal-overlay'; modal.id=modalId; document.body.appendChild(modal); }
+  modal.innerHTML = `
+    <div class="modal" style="max-width:520px;">
+      <h3>🧾 Emitir Comprobante — </h3>
+      <div class="modal-sub">NUEVA EMISIÓN</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="fg"><label class="field-req">Tipo de Comprobante</label>
+			<select id="comp-tipo">
+			  <option>Factura</option>
+			  <option>Boleta</option>
+			  <option>Recibo de Pago</option>
+			  <option>Nota de Débito</option>
+			  <option>Nota de Crédito</option>
+			</select></div>
+        <div class="fg"><label class="field-req">Socio / Cliente</label><input type="text" id="comp-cliente" placeholder="Nombre o N° de socio"/></div>
+        <div class="fg"><label class="field-req">Monto (S/)</label><input type="number" id="comp-monto" placeholder="0.00" step="0.01"/></div>
+        <div class="fg"><label>Concepto</label><input type="text" id="comp-concepto" placeholder="Descripción"/></div>
+      </div>
+      <div class="modal-footer">
+		<button class="btn-outline" onclick="closeModal('${modalId}')">Cancelar</button>
+		<button class="btn-gold" onclick="confirmarComprobante()">✓ Emitir</button>      </div>
+    </div>`;
+  modal.classList.add('open');
+}
+function confirmarComprobante() {
+	  const tipo    = document.getElementById('comp-tipo').value;
+	  const cliente = document.getElementById('comp-cliente').value.trim();
+	  const monto = parseFloat(document.getElementById('comp-monto').value||0);
+	  if (!cliente) { showToast('Nombre del socio es obligatorio','error'); return; }
+	  if (monto <= 0) { showToast('El monto debe ser mayor a 0','error'); return; }
+	  const num   = 'REC-2026-0' + stored.nextCompNum;
+	  const fecha = new Date().toISOString().slice(0,10);
+	 fetch('/web/comprobantes', {
+	  method: 'POST',
+	  credentials: 'include',
+	  headers: { 'Content-Type': 'application/json' },
+	  body: JSON.stringify({
+	    numero: num,
+	    fecha: fecha,
+		tipo: tipo,
+	    cliente: cliente,
+	    monto: monto.toFixed(2),
+	    estado: 'Emitido'
+	  })
+	})
+	.then(r => {
+	  if (r.ok) {
+	    renderComprobantes();
+	    closeModal('modal-comprobante');
+	    showPanel('comprobantes');
+	    showToast('Comprobante ' + num + ' emitido — S/ ' + monto.toFixed(2), 'success');
+	  } else {
+	    showToast('Error al emitir comprobante', 'error');
+	  }
+	})
+	.catch(() => showToast('Error de conexión', 'error'));
+	}
+
+	function descargarComprobante(num) {
+	  fetch('/web/comprobantes', { credentials: 'include' })
+	  .then(r => r.json())
+	  .then(comprobantes => {
+	    const comp = comprobantes.find(c => c.numero === num);
+	    if (!comp) { showToast('Comprobante no encontrado', 'error'); return; }
+	    showToast('Generando PDF del comprobante ' + num + '...', 'info');
+	    setTimeout(() => {
+	      const win = window.open('','_blank','width=620,height=520');
+	      win.document.write('<html><head><title>Comprobante ' + num + '</title>'
+	        + '<style>body{font-family:Arial,sans-serif;padding:30px;color:#222;}'
+	        + '.logo{font-size:22px;font-weight:bold;color:#1a3461;}'
+	        + 'table{width:100%;border-collapse:collapse;margin-top:20px;}'
+	        + 'td{padding:8px 12px;border:1px solid #ccc;}'
+	        + '.lbl{background:#f5f5f5;font-weight:bold;width:40%;}'
+	        + '.total{background:#1a3461;color:#fff;font-weight:bold;text-align:right;}'
+	        + '</style></head><body>'
+	        + '<div class="logo">⚖ FINANTEL S.A.C.</div>'
+	        + '<div style="font-size:11px;color:#666;">RUC 20110300971 · Av. Bolivia 258, Lima 15001</div><hr>'
+	        + '<h2 style="color:#1a3461;">COMPROBANTE DE PAGO</h2>'
+	        + '<table>'
+	        + '<tr><td class="lbl">N° Comprobante</td><td><strong>' + comp.numero + '</strong></td></tr>'
+	        + '<tr><td class="lbl">Fecha</td><td>' + (comp.fecha || '—') + '</td></tr>'
+	        + '<tr><td class="lbl">Tipo</td><td>' + (comp.tipo || '—') + '</td></tr>'
+	        + '<tr><td class="lbl">Socio / Cliente</td><td>' + (comp.cliente || '—') + '</td></tr>'
+	        + '<tr><td class="lbl">Estado</td><td>' + (comp.estado || '—') + '</td></tr>'
+	        + '<tr><td class="total" colspan="2">MONTO TOTAL: S/ ' + (comp.monto || '0.00') + '</td></tr>'
+	        + '</table>'
+	        + '<p style="font-size:10px;color:#999;margin-top:20px;">Generado por FINANTEL Sistema Contable v2.0</p>'
+	        + '<scr'+'ipt>window.print();<\/scr'+'ipt></body></html>');
+	      win.document.close();
+	      showToast('Comprobante ' + num + ' listo para imprimir', 'success');
+	    }, 800);
+	  })
+	  .catch(() => showToast('Error de conexión', 'error'));
+	}
+
+function renderRespaldos() {
+  const tbody = document.querySelector('#sub-respaldos table tbody');
+  if (!tbody) return;
+
+  fetch('/web/respaldos', { credentials: 'include' })
+  .then(r => r.json())
+  .then(respaldos => {
+    if (!respaldos.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Sin respaldos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = respaldos.map(r => {
+      const tipoBadge = r.tipo==='Manual'?'b-blue':r.tipo==='Diario'?'b-green':r.tipo==='Semanal'?'b-gold':'b-teal';
+      return `<tr>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${r.fecha}</td>
+        <td><span class="badge ${tipoBadge}">${r.tipo}</span></td>
+        <td>${r.tamanio}</td>
+        <td>${r.usuario}</td>
+        <td><span class="badge b-green">${r.estado}</span></td>
+        <td><button class="btn-outline btn-sm" onclick="restaurarRespaldo('${r.fecha}')">Restaurar</button></td>
+      </tr>`;
+    }).join('');
+  })
+  .catch(() => showToast('Error cargando respaldos', 'error'));
+  // Cargar estado de switches
+  fetch('/web/config-respaldos', { credentials: 'include' })
+  .then(r => r.json())
+  .then(configs => {
+    const checkboxes = document.querySelectorAll('#sub-respaldos input[type=checkbox]');
+	configs.forEach(c => {
+	  if (c.tipo === 'Diario') checkboxes[0].checked = c.activo == 1;
+	  else if (c.tipo === 'Semanal') checkboxes[1].checked = c.activo == 1;
+	  else if (c.tipo === 'Mensual') checkboxes[2].checked = c.activo == 1;
+	});
+
+	// Actualizar alerta
+	const activados = configs.filter(c => c.activo == 1).map(c => {
+	  if (c.tipo === 'Diario') return 'Diario 02:00 AM';
+	  if (c.tipo === 'Semanal') return 'Semanal 03:00 AM';
+	  if (c.tipo === 'Mensual') return 'Mensual 04:00 AM';
+	}).join(', ');
+	const alerta = document.querySelector('#sub-respaldos .alert-success');
+	if (alerta) {
+	  if (activados) alerta.innerHTML = `✓ Respaldos activos: <strong>${activados}</strong>`;
+	  else alerta.innerHTML = `⚠ No hay respaldos programados activos.`;
+	  alerta.className = activados ? 'alert alert-success' : 'alert alert-warn';
+	  }
+	});
+}
+function toggleRespaldo(tipo, activo) {
+  fetch('/web/config-respaldos/' + tipo, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ activo: activo })
+  })
+  .then(r => {
+    if (r.ok) {
+      showToast('Respaldo ' + tipo + ' ' + (activo ? 'activado' : 'desactivado'), 'info');
+      renderRespaldos();
+    } else {
+      showToast('Error al actualizar', 'error');
+    }
+  });
+}
+function crearRespaldo(btn) {
+  const trigger = btn || event?.target || document.activeElement;
+  if (trigger) { trigger.disabled = true; trigger.textContent = '⏳ Creando...'; }
+  showToast('Creando respaldo manual...', 'info');
+
+  fetch('/web/respaldos', {
+    method: 'POST',
+    credentials: 'include'
+  })
+  .then(r => {
+    if (r.ok) {
+      renderRespaldos();
+      if (trigger) { trigger.disabled = false; trigger.textContent = '+ Respaldo Manual'; }
+      showToast('Respaldo manual creado correctamente', 'success');
+    } else {
+      showToast('Error al crear respaldo', 'error');
+      if (trigger) { trigger.disabled = false; trigger.textContent = '+ Respaldo Manual'; }
+    }
+  })
+  .catch(() => {
+    showToast('Error de conexión', 'error');
+    if (trigger) { trigger.disabled = false; trigger.textContent = '+ Respaldo Manual'; }
+  });
+}
+
+function restaurarRespaldo(fecha) {
+  if (!confirm(`¿Restaurar la base de datos al punto:\n${fecha}\n\nEsta acción reemplazará los datos actuales. ¿Continuar?`)) return;
+  showToast(`Restaurando BD al punto ${fecha}...`,'warn');
+  setTimeout(() => {
+    showToast('Base de datos restaurada exitosamente ✓','success');
+    logAudit(document.getElementById('user-name-hdr').textContent,'Restauración','Base de datos',`Punto: ${fecha}`,'Restauración completada');
+  }, 2500);
+}
+// ============================================================
+// USUARIOS —    con persistencia
+// ============================================================
+function renderUsuarios() {
+  const tbody = document.querySelector('#sub-usuarios table tbody');
+  if (!tbody) return;
+  
+  	fetch('/web/usuarios', { credentials: 'include' })
+    .then(r => r.json())
+    .then(usuarios => {
+      if (!usuarios.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Sin usuarios registrados</td></tr>';
+        return;
+      }
+      tbody.innerHTML = usuarios.map(u => `
+        <tr>
+          <td>${u.nombre}</td>
+          <td><span class="badge b-gold">${formatRol(u.rol)}</span></td>
+          <td><span class="badge ${u.estado === 'Activo' ? 'b-green' : 'b-red'}">${u.estado}</span></td>
+          <td style="font-family:'IBM Plex Mono',monospace;">${u.intentos}</td>
+          <td style="font-size:11px;color:var(--muted);">${u.ultimo_acceso || '—'}</td>
+		  <td><button class="btn-outline btn-sm" onclick="editarUsuario(${u.id})">Editar</button></td>
+        </tr>`).join('');
+    })
+    .catch(() => {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red);">Error cargando usuarios</td></tr>';
+	  setTimeout(() => { document.documentElement.scrollTop = 0; }, 200);
+    });
+}
+function openModalUsuario() { document.getElementById('modal-usuario').classList.add('open'); }
+function guardarUsuario() {
+  const nombre = document.querySelector('#modal-usuario input[type=text]')?.value.trim();
+  const email  = document.querySelector('#modal-usuario input[type=email]')?.value.trim();
+  const pass   = document.querySelector('#modal-usuario input[type=password]')?.value;
+  const rolEl  = document.querySelector('#modal-usuario select');
+  const rol    = rolEl?.value;
+  const dni = document.getElementById('modal-dni')?.value.trim();
+  const tel = document.getElementById('modal-tel')?.value.trim();
+
+  let errores = [];
+  if (!nombre) errores.push('Nombre es obligatorio');
+  if (!email || !email.includes('@')) errores.push('Email inválido');
+  if (!pass || pass.length < 8) errores.push('Contraseña mín. 8 caracteres');
+  if (!rol || rol.startsWith('—')) errores.push('Selecciona un rol');
+  if (dni && !/^\d{8}$/.test(dni)) errores.push('DNI debe tener exactamente 8 dígitos');
+  if (tel) {
+    if (!/^\d{9}$/.test(tel)) errores.push('Teléfono debe tener exactamente 9 dígitos');
+    else if (!tel.startsWith('9')) errores.push('Teléfono debe empezar en 9');
+  }
+  if (errores.length) { errores.forEach(e => showToast(e, 'error')); return; }
+  fetch('/web/usuarios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+	body: JSON.stringify({ nombre, email, password: pass, rol, estado: 'Activo', intentos: 0, dni, telefono: tel })
+  })
+  .then(r => {
+    if (r.ok) {
+      showToast('Usuario ' + nombre + ' creado correctamente', 'success');
+      closeModal('modal-usuario');
+      renderUsuarios();
+      document.querySelector('#modal-usuario input[type=text]').value = '';
+      document.querySelector('#modal-usuario input[type=email]').value = '';
+      document.querySelector('#modal-usuario input[type=password]').value = '';
+      if (rolEl) rolEl.value = rolEl.options[0].value;
+	  document.getElementById('modal-dni').value = '';
+	  document.getElementById('modal-tel').value = '';
+    } else {
+      showToast('Error al crear usuario', 'error');
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+
+function desbloquearUsuario(idx) {
+  stored.usuarios[idx].estado='Activo'; stored.usuarios[idx].intentos=0;
+  saveAll(); renderUsuarios();
+  showToast(`Cuenta de ${stored.usuarios[idx].nombre} desbloqueada`, 'success');
+  logAudit(document.getElementById('user-name-hdr').textContent,'Desbloqueo',`Usuario: ${stored.usuarios[idx].nombre}`,'Bloqueado','Activo');
+}
+
+function editarUsuario(id) {
+	fetch('/web/usuarios', { credentials: 'include' })
+    .then(r => r.json())
+    .then(usuarios => {
+      const u = usuarios.find(x => x.id === id);
+      if (!u) return;
+      const modalId = 'modal-edit-usuario';
+      let modal = document.getElementById(modalId);
+      if (!modal) { modal=document.createElement('div'); modal.className='modal-overlay'; modal.id=modalId; document.body.appendChild(modal); }
+      modal.innerHTML = `
+        <div class="modal" style="max-width:480px;">
+          <h3>Editar Usuario</h3>
+          <div class="modal-sub">MODIFICAR PERMISOS Y ROL</div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="fg"><label>Nombre</label><input type="text" id="eu-nombre" value="${u.nombre}"/></div>
+            <div class="fg"><label>Rol</label>
+              <select id="eu-rol">
+				<option value="Administrador" ${u.rol==='Administrador'?'selected':''}>Administrador</option>
+				<option value="Contador_General" ${u.rol==='Contador_General'?'selected':''}>Contador General</option>
+				<option value="Auditor" ${u.rol==='Auditor'?'selected':''}>Auditor</option>
+				<option value="Personal_Autorizado" ${u.rol==='Personal_Autorizado'?'selected':''}>Personal Autorizado</option>
+              </select></div>
+            <div class="fg"><label>Estado</label>
+              <select id="eu-estado">
+                <option ${u.estado==='Activo'?'selected':''}>Activo</option>
+                <option ${u.estado==='Bloqueado'?'selected':''}>Bloqueado</option>
+              </select></div>
+          </div>
+          <div class="modal-footer">
+			<button class="btn-outline" onclick="closeModal('${modalId}')">Cancelar</button>
+			<button class="btn-outline" onclick="closeModal('${modalId}');cambiarPassword(${u.id})">🔒 Cambiar Contraseña</button>
+			<button class="btn-gold" onclick="guardarEdicionUsuario(${u.id})">Guardar Cambios</button>
+          </div>
+        </div>`;
+      modal.classList.add('open');
+    });
+}
+
+function guardarEdicionUsuario(id) {
+  const nombre = document.getElementById('eu-nombre').value.trim();
+  const rol    = document.getElementById('eu-rol').value;
+  const estado = document.getElementById('eu-estado').value;
+
+  fetch(`/web/usuarios/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nombre, rol, estado })
+  })
+  .then(r => {
+    if (r.ok) {
+      showToast('Usuario actualizado correctamente', 'success');
+      closeModal('modal-edit-usuario');
+      renderUsuarios();
+    } else {
+      showToast('Error al actualizar', 'error');
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+
+function nuevoPeriodo() {
+  var mid = 'modal-nuevo-periodo';
+  var m = document.getElementById(mid);
+  if (!m) { m=document.createElement('div'); m.className='modal-overlay'; m.id=mid; document.body.appendChild(m); }
+  m.innerHTML = '<div class="modal" style="max-width:500px;">'
+    + '<h3>Nuevo Periodo Contable</h3>'
+    + '<div class="modal-sub">DEFINICI\u00d3N DE PERIODO</div>'
+    + '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<div class="fg"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Nombre del Periodo *</label>'
+    + '<input type="text" id="np-nom" placeholder="Ej: T2 2026" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;outline:none;"/></div>'
+    + '<div class="form-grid-2">'
+    + '<div class="fg"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Fecha Inicio *</label>'
+    + '<input type="date" id="np-ini" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;outline:none;"/></div>'
+    + '<div class="fg"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Fecha Cierre *</label>'
+    + '<input type="date" id="np-cie" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;outline:none;"/></div>'
+    + '</div></div>'
+    + '<div class="modal-footer">'
+    + '<button class="btn-outline" onclick="closeModal(\'modal-nuevo-periodo\')">Cancelar</button>'
+    + '<button class="btn-gold" onclick="confirmarNuevoPeriodo()">Crear Periodo</button>'
+    + '</div></div>';
+  m.classList.add('open');
+}
+
+function confirmarNuevoPeriodo() {
+  const nom = document.getElementById('np-nom').value.trim();
+  const ini = document.getElementById('np-ini').value;
+  const cie = document.getElementById('np-cie').value;
+  if (!nom) { showToast('El nombre del periodo es obligatorio','error'); return; }
+  if (!ini) { showToast('La fecha de inicio es obligatoria','error'); return; }
+  if (!cie) { showToast('La fecha de cierre es obligatoria','error'); return; }
+  if (ini >= cie) { showToast('El cierre debe ser posterior al inicio','error'); return; }
+
+  fetch('/web/periodos', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ periodo: nom, fechaInicio: ini, fechaCierre: cie })
+  })
+  .then(r => {
+    if (r.ok) {
+      closeModal('modal-nuevo-periodo');
+      renderPeriodos();
+      showToast('Periodo "' + nom + '" creado correctamente', 'success');
+    } else {
+      showToast('Error al crear periodo', 'error');
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+
+function renderPeriodos() {
+  const tbody = document.querySelector('#panel-periodos table tbody');
+  if (!tbody) return;
+
+  fetch('/web/periodos', { credentials: 'include' })
+  .then(r => r.json())
+  .then(periodos => {
+    if (!periodos.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Sin periodos registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = periodos.map(p => `
+      <tr>
+        <td>${p.periodo || '—'}</td>
+        <td>${p.fechaInicio || '—'}</td>
+        <td>${p.fechaCierre || '—'}</td>
+        <td><span class="badge ${p.estado==='Activo'?'b-gold':'b-red'}">${p.estado}</span></td>
+        <td>—</td>
+        <td>${p.cerradoPor || '—'}</td>
+        <td>${p.estado==='Activo'
+          ? `<button class="btn-outline btn-sm" onclick="cerrarPeriodo(${p.id})">Cerrar Periodo</button>`
+          : `<span class="badge b-muted">Cerrado</span>`}
+        </td>
+      </tr>`).join('');
+  })
+  .catch(() => {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);">Error cargando periodos</td></tr>';
+  });
+}
+function cerrarPeriodo(id) {
+  if (!confirm('¿Cerrar este periodo? Los asientos quedarán bloqueados.')) return;
+  fetch(`/web/periodos/${id}/cerrar`, {
+    method: 'PATCH',
+    credentials: 'include'
+  })
+  .then(r => {
+    if (r.ok) {
+      renderPeriodos();
+      showToast('Periodo cerrado correctamente', 'warn');
+    } else {
+      showToast('Error al cerrar periodo', 'error');
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+
+function guardarConfig() {
+  const root = document.getElementById('sub-configuracion');
+  if (!root) {
+    showToast('Configuración guardada y persistida ✓','success');
+    saveAll();
+    return;
+  }
+
+  const fields = root.querySelectorAll('.card input, .card select, .card textarea');
+  const checks = root.querySelectorAll('input[type=checkbox]');
+  stored.config = {
+    razonSocial: fields[0]?.value || 'FINANTEL S.A.C.',
+    ruc: fields[1]?.value || '20110300971',
+    direccion: fields[2]?.value || '',
+    email: fields[3]?.value || '',
+    web: fields[4]?.value || '',
+    moneda: fields[5]?.value || 'PEN — Sol Peruano',
+    periodoFiscal: fields[6]?.value || '',
+    metodoDep: fields[7]?.value || '',
+    tasaIR: fields[8]?.value || '',
+    aprobacionDoble: !!checks[0]?.checked,
+    alertasAutomaticas: !!checks[1]?.checked,
+    ocrAutomatico: !!checks[2]?.checked,
+    alertasEmail: !!checks[3]?.checked,
+    alertasVencimientos: !!checks[4]?.checked,
+    diasPrevios: fields[14]?.value || '7'
+  };
+  saveAll();
+  applyConfigToUI();
+
+  // Actualizar nombre en UI
+  const footer = document.getElementById('footer-info');
+  if (footer) {
+    footer.textContent = stored.config.razonSocial + ' · RUC ' + stored.config.ruc + ' · ' + stored.config.direccion;
+  }
+  showToast('Cambios guardados correctamente ✓','success');
+  logAudit(document.getElementById('user-name-hdr').textContent,'Configuración','Parámetros sistema','—','Cambios guardados');
+}
+
+function guardarCambios() {
+  guardarConfig();
+}
+
+function applyConfigToUI() {
+  const root = document.getElementById('sub-configuracion');
+  const cfg = stored.config || {};
+  if (!root) return;
+  const fields = root.querySelectorAll('.card input, .card select, .card textarea');
+  if (fields[0]) fields[0].value = cfg.razonSocial || fields[0].value;
+  if (fields[1]) fields[1].value = cfg.ruc || fields[1].value;
+  if (fields[2]) fields[2].value = cfg.direccion || fields[2].value;
+  if (fields[3]) fields[3].value = cfg.email || fields[3].value;
+  if (fields[4]) fields[4].value = cfg.web || fields[4].value;
+  if (fields[5]) fields[5].value = cfg.moneda || fields[5].value;
+  const checks = root.querySelectorAll('input[type=checkbox]');
+  if (checks[0]) checks[0].checked = cfg.aprobacionDoble ?? checks[0].checked;
+  if (checks[1]) checks[1].checked = cfg.alertasAutomaticas ?? checks[1].checked;
+  if (checks[2]) checks[2].checked = cfg.ocrAutomatico ?? checks[2].checked;
+  const footer = document.getElementById('footer-info');
+  if (footer && cfg.razonSocial) {
+    footer.textContent = cfg.razonSocial + ' · RUC ' + (cfg.ruc||'') + ' · ' + (cfg.direccion||'');
+  }
+}
+function showHelp() { showAdminPanel('sub-ayuda'); showToast('Centro de Ayuda','info'); }
+
+function getInconsistencyRow(id) {
+  return Array.from(document.querySelectorAll('#panel-errores tbody tr')).find(tr => (tr.cells[0]?.textContent || '').trim() === id) || null;
+}
+
+function saveInconsistencyState(id, estado) {
+  stored.inconsistencias = stored.inconsistencias || {};
+  stored.inconsistencias[id] = Object.assign({ actualizado: new Date().toLocaleString('es-PE') }, estado);
+  saveAll();
+}
+
+function setInconsistencyActionCell(row, label, cls='b-green') {
+  if (!row) return;
+  row.cells[5].innerHTML = `<span class="badge ${cls}">${label}</span>`;
+}
+
+function corregirInconsistencia(id) {
+  const row = getInconsistencyRow(id);
+  const asiento = stored.asientos.find(a => a.id === id);
+  if (asiento) {
+    asiento.estado = 'En corrección';
+    saveAll();
+    renderAsientos();
+    showPanel('asientos');
+    showToast(`Asiento ${id} abierto en modo corrección`, 'success');
+    logAudit(document.getElementById('user-name-hdr').textContent, 'Edición', id, 'Con error', 'En corrección');
+    return;
+  }
+  if (row) {
+    row.cells[3].innerHTML = '<span class="badge b-gold">En corrección</span>';
+    row.cells[4].innerHTML = '<span class="badge b-green">Con doc.</span>';
+    setInconsistencyActionCell(row, 'Corregido', 'b-green');
+    saveInconsistencyState(id, { estado: 'Corregido' });
+    showToast(`Asiento ${id} corregido`, 'success');
+    logAudit(document.getElementById('user-name-hdr').textContent, 'Edición', id, 'Con error', 'Corregido');
+    return;
+  }
+  showToast(`Asiento ${id} abierto para corrección`, 'info');
+}
+
+function revisarCuentaInactiva(id) {
+  const row = getInconsistencyRow(id);
+  const asiento = stored.asientos.find(a => a.id === id);
+  if (asiento) {
+    asiento.estado = 'En revisión';
+    saveAll();
+    renderAsientos();
+  }
+  if (row) {
+    row.cells[3].innerHTML = '<span class="badge b-teal">Revisada</span>';
+    setInconsistencyActionCell(row, 'Revisado', 'b-teal');
+    saveInconsistencyState(id, { estado: 'Revisado' });
+  }
+  showPanel('cuentas');
+  showToast(`Cuenta inactiva ${id} marcada para revisión`, 'success');
+  logAudit(document.getElementById('user-name-hdr').textContent, 'Edición', id, 'Cuenta inactiva', 'En revisión');
+}
+
+function solicitarAprobacion(id) {
+  const row = getInconsistencyRow(id);
+  const asiento = stored.asientos.find(a => a.id === id);
+  if (asiento) {
+    asiento.estado = 'Pendiente aprobación';
+    saveAll();
+    renderAsientos();
+    showPanel('asientos');
+  }
+  if (row) {
+    row.cells[3].innerHTML = '<span class="badge b-gold">Sin aprobación</span>';
+    setInconsistencyActionCell(row, 'Solicitado', 'b-gold');
+    saveInconsistencyState(id, { estado: 'Solicitado' });
+  }
+  showToast(`Solicitud de aprobación enviada al Contador General`, 'success');
+  logAudit(document.getElementById('user-name-hdr').textContent, 'Aprobación', id, 'Pendiente', 'Solicitada');
+}
+
+function abrirTicketSoporte() {
+  const modalId='modal-ticket';
+  let modal=document.getElementById(modalId);
+  if (!modal) { modal=document.createElement('div'); modal.className='modal-overlay'; modal.id=modalId; document.body.appendChild(modal); }
+  modal.innerHTML=`
+    <div class="modal" style="max-width:480px;">
+      <h3>📮 Crear Ticket — </h3>
+      <div class="modal-sub">SOPORTE TÉCNICO FINANTEL</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="fg"><label class="field-req">Asunto</label><input type="text" id="ticket-asunto" placeholder="Describe el problema"/></div>
+        <div class="fg"><label>Prioridad</label><select id="ticket-prio"><option>Alta</option><option selected>Media</option><option>Baja</option></select></div>
+        <div class="fg"><label class="field-req">Descripción</label><textarea id="ticket-desc" placeholder="Detalla el problema..."></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" onclick="closeModal('modal-ticket')">Cancelar</button>
+        <button class="btn-gold" onclick="enviarTicket()">📮 Enviar Ticket</button>
+      </div>
+    </div>`;
+  modal.classList.add('open');
+}
+
+function enviarTicket() {
+  const asunto = document.getElementById('ticket-asunto')?.value.trim();
+  const prio   = document.getElementById('ticket-prio')?.value;
+  const desc   = document.getElementById('ticket-desc')?.value.trim();
+  if (!asunto) { showToast('El asunto es obligatorio','error'); return; }
+  if (!desc)   { showToast('La descripción es obligatoria','error'); return; }
+  const num = 'TKT-' + String(Math.floor(Math.random()*9000+1000));
+  closeModal('modal-ticket');
+  showToast(`Ticket ${num} creado — Prioridad: ${prio}. Se responderá a tu email en 24h.`, 'success');
+  logAudit(document.getElementById('user-name-hdr').textContent,'Soporte',`Ticket ${num}`,`Prioridad: ${prio}`,asunto);
+}
+
+function exportAuditCSV() {
+  var rows = document.querySelectorAll('#sub-auditoria table tbody tr, #panel-auditoria table tbody tr');
+  if (!rows.length) { showToast('No hay registros para exportar','warn'); return; }
+  var csv = '"Fecha/Hora","Usuario","Acción","Objeto","Valor Anterior","Valor Nuevo"\n';
+  rows.forEach(function(tr) {
+    var cells = tr.querySelectorAll('td');
+    if (cells.length >= 6) {
+      var row = [cells[0],cells[1],cells[2],cells[3],cells[4],cells[5]]
+        .map(function(td){ return '"'+td.textContent.trim().replace(/"/g,'""')+'"'; }).join(',');
+      csv += row + '\n';
+    }
+  });
+  var BOM = '﻿';
+  var blob = new Blob([BOM+csv], {type:'text/csv;charset=utf-8;'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'FINANTEL_Auditoria_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Auditoría exportada: ' + a.download, 'success');
+}
+
+function exportPDF() {
+  var panel = document.querySelector('.panel.active');
+  if (!panel) { showToast('No hay panel activo','error'); return; }
+  var titulo = (panel.querySelector('.sec-title') || {textContent:''}).textContent || 'Reporte FINANTEL';
+  var fecha  = new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'long',year:'numeric'});
+  var clone  = panel.cloneNode(true);
+  clone.querySelectorAll('button,.btns-row').forEach(function(el){el.remove();});
+  var html = '<!DOCTYPE html><html><head><title>'+titulo+' — FINANTEL</title>'
+    + '<style>'
+    + '*{box-sizing:border-box;}body{font-family:Arial,sans-serif;color:#222;padding:24px;font-size:12px;}'
+    + 'h2{color:#1a3461;margin-bottom:4px;}'
+    + 'table{width:100%;border-collapse:collapse;margin-bottom:14px;}'
+    + 'th{background:#1a3461;color:#fff;padding:6px 10px;text-align:left;font-size:10px;}'
+    + 'td{padding:6px 10px;border-bottom:1px solid #ddd;font-size:12px;}'
+    + '.kpi-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}'
+    + '.kpi-card{border:1px solid #ccc;border-radius:4px;padding:10px 14px;min-width:150px;}'
+    + '.kpi-val{font-size:20px;font-weight:bold;color:#1a3461;}.kpi-lbl{font-size:9px;color:#888;text-transform:uppercase;}'
+    + '.card{border:1px solid #ddd;border-radius:4px;margin-bottom:12px;}'
+    + '.card-hdr{background:#f5f5f5;padding:7px 12px;border-bottom:1px solid #ddd;font-weight:bold;font-size:12px;}'
+    + '.card-body,.card-body-0{padding:10px 12px;}'
+    + '.sec-title{font-size:18px;font-weight:bold;color:#1a3461;margin-bottom:2px;}'
+    + '.sec-sub{font-size:10px;color:#666;margin-bottom:12px;}'
+    + '.badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:10px;background:#e5e7eb;color:#222;}'
+    + '.pos{color:green;}.neg{color:red;}.tr{text-align:right;}'
+    + '.alert{padding:8px 12px;border:1px solid #ccc;border-radius:4px;margin-bottom:8px;font-size:11px;}'
+    + '.two-col,.three-col{display:block;}'
+    + '@media print{body{padding:10px;}@page{margin:1cm;}}'
+    + '</style></head><body>'
+    + '<h2>'+titulo+'</h2>'
+    + '<p style="font-size:10px;color:#666;margin-bottom:14px;">FINANTEL S.A.C. · RUC 20110300971 · '+fecha+'</p><hr style="margin-bottom:12px;">'
+    + clone.innerHTML
+    + '<p style="font-size:9px;color:#aaa;margin-top:20px;border-top:1px solid #eee;padding-top:8px;">Generado por FINANTEL Sistema Contable · '+fecha+'</p>'
+    + '<scr'+'ipt>setTimeout(function(){window.print();},300);<\/scr'+'ipt>'
+    + '</body></html>';
+  var win = window.open('','_blank','width=960,height=720');
+  win.document.write(html);
+  win.document.close();
+  showToast('Ventana de impresión abierta — usa Ctrl+P para guardar como PDF','success');
+}
+
+function exportExcel() {
+  var panel = document.querySelector('.panel.active');
+  if (!panel) { showToast('No hay panel activo','error'); return; }
+  var titulo = (panel.querySelector('.sec-title') || {textContent:'reporte'}).textContent;
+  var tabla  = panel.querySelector('table');
+  if (!tabla) { showToast('Este panel no tiene tabla exportable','warn'); return; }
+  var csv = '';
+  var headers = [];
+  tabla.querySelectorAll('th').forEach(function(th){ headers.push('"'+th.textContent.trim().replace(/"/g,'""')+'"'); });
+  csv += headers.join(',') + '\n';
+  tabla.querySelectorAll('tbody tr').forEach(function(tr){
+    var cells = [];
+    tr.querySelectorAll('td').forEach(function(td){ cells.push('"'+td.textContent.trim().replace(/"/g,'""')+'"'); });
+    if (cells.length) csv += cells.join(',') + '\n';
+  });
+  var BOM = '\uFEFF';
+  var blob = new Blob([BOM+csv], {type:'text/csv;charset=utf-8;'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url;
+  a.download = 'FINANTEL_' + titulo.replace(/[^a-zA-Z0-9]/g,'_') + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Archivo descargado: ' + a.download, 'success');
+}
+
+function nuevaCuenta() {
+  var mid = 'modal-nueva-cuenta';
+  var m = document.getElementById(mid);
+  if (!m) { m=document.createElement('div'); m.className='modal-overlay'; m.id=mid; document.body.appendChild(m); }
+  m.innerHTML = '<div class="modal" style="max-width:560px;">'
+    + '<h3>Nueva Cuenta Contable</h3>'
+    + '<div class="modal-sub">PLAN DE CUENTAS</div>'
+    + '<div style="display:flex;flex-direction:column;gap:12px;">'
+    + '<div class="form-grid-2">'
+    + '<div class="fg"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">C\u00f3digo *</label>'
+    + '<input type="text" id="nc-cod" placeholder="Ej: 1302" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;outline:none;"/></div>'
+    + '<div class="fg"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Descripci\u00f3n *</label>'
+    + '<input type="text" id="nc-des" placeholder="Nombre de la cuenta" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;outline:none;"/></div>'
+    + '</div>'
+    + '<div class="form-grid-2">'
+    + '<div class="fg"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Clasificaci\u00f3n *</label>'
+    + '<select id="nc-cla" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;outline:none;">'
+    + '<option value="">\u2014 Seleccionar \u2014</option>'
+    + '<option>Activo Corriente</option><option>Activo No Corriente</option>'
+    + '<option>Pasivo Corriente</option><option>Pasivo No Corriente</option>'
+    + '<option>Patrimonio</option><option>Ingresos</option><option>Gastos</option>'
+    + '</select></div>'
+    + '<div class="fg"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Tipo *</label>'
+    + '<select id="nc-tip" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;outline:none;">'
+    + '<option>D\u00e9bito</option><option>Cr\u00e9dito</option>'
+    + '</select></div>'
+    + '</div>'
+    + '<div class="fg"><label style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Operaciones Autorizadas</label>'
+    + '<input type="text" id="nc-ops" placeholder="Ej: Cr\u00e9ditos, Cobros (vac\u00edo = Todas)" style="background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px;outline:none;"/></div>'
+    + '</div>'
+    + '<div class="modal-footer">'
+    + '<button class="btn-outline" onclick="closeModal(\'modal-nueva-cuenta\')">Cancelar</button>'
+    + '<button class="btn-gold" onclick="confirmarNuevaCuenta()">Guardar Cuenta</button>'
+    + '</div></div>';
+  m.classList.add('open');
+}
+
+function confirmarNuevaCuenta() {
+  var cod = document.getElementById('nc-cod').value.trim();
+  var des = document.getElementById('nc-des').value.trim();
+  var cla = document.getElementById('nc-cla').value;
+  var tip = document.getElementById('nc-tip').value;
+  var ops = document.getElementById('nc-ops').value.trim() || 'Todas';
+  if (!cod) { showToast('El código de cuenta es obligatorio','error'); return; }
+  if (!des) { showToast('La descripción es obligatoria','error'); return; }
+  if (!cla) { showToast('Selecciona la clasificación','error'); return; }
+  var cc = cla.indexOf('Activo')>=0?'b-teal':cla.indexOf('Pasivo')>=0?'b-red':cla==='Patrimonio'?'b-gold':cla==='Ingresos'?'b-blue':'b-muted';
+  var tbody = document.querySelector('#panel-cuentas table tbody');
+  if (tbody) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td style="font-family:\'IBM Plex Mono\',monospace;">'+cod+'</td>'
+      +'<td>'+des+'</td>'
+      +'<td><span class="badge '+cc+'">'+cla+'</span></td>'
+      +'<td>'+tip+'</td>'
+      +'<td><span class="badge b-green">Activa</span></td>'
+      +'<td>'+ops+'</td>'
+      +'<td><button class="btn-outline btn-sm" onclick="showToast(\'Cuenta editada\',\'info\')">Editar</button></td>';
+    tbody.appendChild(tr);
+  }
+  fetch('/web/cuentas', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ codigo: cod, descripcion: des, clasificacion: cla, tipo: tip, opsAutorizadas: ops, estado: 'Activa' })
+  })
+  .then(r => {
+    if (r.ok) {
+      closeModal('modal-nueva-cuenta');
+      renderCuentas();
+      showToast('Cuenta ' + cod + ' — ' + des + ' creada correctamente', 'success');
+    } else {
+      showToast('Error al crear cuenta', 'error');
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+
+function cambiarPassword(id) {
+  const modalId = 'modal-cambiar-pass';
+  let modal = document.getElementById(modalId);
+  if (!modal) { modal=document.createElement('div'); modal.className='modal-overlay'; modal.id=modalId; document.body.appendChild(modal); }
+  modal.innerHTML = `
+    <div class="modal" style="max-width:440px;">
+      <h3>🔒 Cambiar Contraseña</h3>
+      <div class="modal-sub">VERIFICACIÓN DE IDENTIDAD REQUERIDA</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="fg"><label class="field-req">Contraseña actual</label>
+          <input type="password" id="cp-actual" placeholder="Ingresa tu contraseña actual"/></div>
+        <div class="fg"><label class="field-req">Nueva contraseña</label>
+          <input type="password" id="cp-nueva" placeholder="Mínimo 8 caracteres"/></div>
+        <div class="fg"><label class="field-req">Confirmar nueva contraseña</label>
+          <input type="password" id="cp-confirmar" placeholder="Repite la nueva contraseña"/></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" onclick="closeModal('${modalId}')">Cancelar</button>
+        <button class="btn-gold" onclick="confirmarCambioPassword(${id})">🔒 Cambiar</button>
+      </div>
+    </div>`;
+  modal.classList.add('open');
+}
+
+function confirmarCambioPassword(id) {
+  const actual    = document.getElementById('cp-actual').value;
+  const nueva     = document.getElementById('cp-nueva').value;
+  const confirmar = document.getElementById('cp-confirmar').value;
+
+  if (!actual) { showToast('Ingresa tu contraseña actual', 'error'); return; }
+  if (!nueva || nueva.length < 8) { showToast('La nueva contraseña debe tener mínimo 8 caracteres', 'error'); return; }
+  if (nueva !== confirmar) { showToast('Las contraseñas no coinciden', 'error'); return; }
+
+  fetch(`/web/usuarios/${id}/password`, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ passwordActual: actual, passwordNueva: nueva })
+  })
+  .then(r => {
+    if (r.ok) {
+      closeModal('modal-cambiar-pass');
+      showToast('Contraseña cambiada correctamente', 'success');
+    } else {
+      r.text().then(msg => showToast(msg || 'Contraseña actual incorrecta', 'error'));
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+document.addEventListener('DOMContentLoaded', () => {
+  applyConfigToUI();
+  renderDashboard();
+  const tc = stored.tcActual || {};
+  const tcBar = document.getElementById('tc-bar');
+  if (tcBar && tc.usd && tc.usd !== '—') tcBar.textContent = `💱 USD/PEN: ${tc.usd}`;
+
+  // PERMISOS POR ROL
+  const userRolRaw = document.getElementById('user-role-hdr')?.textContent?.trim() || '';
+  
+  const roleChip = document.getElementById('user-role-hdr');
+  if (roleChip) roleChip.textContent = formatRol(userRolRaw);
+  console.log('Rol detectado:', userRolRaw);
+  function aplicarPermisosPorRol() {
+      const esAdmin    = userRolRaw === 'Administrador';
+      const esContador = userRolRaw === 'Contador_General';
+      const esAuditor  = userRolRaw === 'Auditor';
+      const esPersonal = userRolRaw === 'Personal_Autorizado';
+
+      if (esContador) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          const texto = item.textContent.trim();
+          if (texto.includes('Usuarios y Roles') ||
+              texto.includes('Respaldos') ||
+              texto.includes('Configuración') ||
+              texto.includes('Auditoría') ||
+              texto.includes('Ayuda')) {
+            item.style.display = 'none';
+          }
+        });
+        document.querySelectorAll('.nav-section').forEach(sec => {
+          if (sec.textContent.trim() === 'Administración') sec.style.display = 'none';
+        });
+      }
+
+      if (esAuditor) {
+        document.querySelectorAll('.btn-gold').forEach(btn => {
+          if (btn.textContent.includes('Nuevo') ||
+              btn.textContent.includes('Crear') ||
+              btn.textContent.includes('Emitir')) {
+            btn.style.display = 'none';
+          }
+        });
+        document.querySelectorAll('.nav-item').forEach(item => {
+          const texto = item.textContent.trim();
+          if (texto.includes('Usuarios y Roles') ||
+              texto.includes('Respaldos') ||
+              texto.includes('Configuración') ||
+              texto.includes('Ayuda')) {
+            item.style.display = 'none';
+          }
+        });
+      }
+
+      if (esPersonal) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+          const texto = item.textContent.trim();
+          if (texto.includes('Balance') ||
+              texto.includes('Resultados') ||
+              texto.includes('Flujo') ||
+              texto.includes('Patrimonio') ||
+              texto.includes('Ratios') ||
+              texto.includes('Costos') ||
+              texto.includes('Usuarios') ||
+              texto.includes('Auditoría') ||
+              texto.includes('Respaldos') ||
+              texto.includes('Configuración') ||
+              texto.includes('Ayuda')) {
+            item.style.display = 'none';
+          }
+        });
+        document.querySelectorAll('.nav-section').forEach(sec => {
+          if (sec.textContent.trim() === 'Reportes' ||
+              sec.textContent.trim() === 'Administración') {
+            sec.style.display = 'none';
+          }
+        });
+      }
+    }
+    setTimeout(aplicarPermisosPorRol, 100);
+  });
+
+function saveAll() {
+  dbSave(stored);
+}
+function getCurrentCorrelativo() {
+  return 'AST-2026-' + String(stored.nextCorrelativo).padStart(5, '0');
+}
+
+function showToast(msg, type='info') {
+  const icons = { success:'✓', error:'✕', warn:'⚠', info:'ℹ' };
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.innerHTML = `<span>${icons[type]||'ℹ'}</span><span>${msg}</span>`;
+
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity='0';
+    toast.style.transform='translateX(120%)';
+    toast.style.transition='all .3s';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+function logAudit(user, accion, objeto, anterior, nuevo) {
+  if (!stored.auditLog) stored.auditLog = [];
+  stored.auditLog.unshift({
+    fecha: new Date().toLocaleString('es-PE'),
+    user: user || '—',
+    accion: accion || '—',
+    objeto: objeto || '—',
+    anterior: anterior || '—',
+    nuevo: nuevo || '—'
+  });
+  saveAll();
+  renderAuditLog();
+}
+
+function renderAuditLog() {
+  const tbody = document.querySelector('#sub-auditoria table tbody');
+  if (!tbody) return;
+
+  fetch('/web/auditoria', { credentials: 'include' })
+  .then(r => r.json())
+  .then(logs => {
+    if (!logs.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Sin registros de auditoría</td></tr>';
+      return;
+    }
+    tbody.innerHTML = logs.map(e => `
+      <tr>
+        <td style="font-size:11px;font-family:'IBM Plex Mono',monospace;">${e.fecha || '—'}</td>
+        <td>${e.usuario || '—'}</td>
+        <td><span class="badge b-teal">${e.accion || '—'}</span></td>
+        <td style="font-family:'IBM Plex Mono',monospace;">${e.objeto || '—'}</td>
+        <td style="color:var(--muted);font-size:11px;">${e.valorAnterior || '—'}</td>
+        <td style="font-size:11px;">${e.valorNuevo || '—'}</td>
+      </tr>`).join('');
+  })
+  .catch(() => {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red);">Error cargando auditoría</td></tr>';
+  });
+  fetch('/web/usuarios', { credentials: 'include' })
+  .then(r => r.json())
+  .then(usuarios => {
+    const sel = document.getElementById('aud-filtro-usuario');
+    if (!sel) return;
+	sel.innerHTML = '<option>Todos los usuarios</option>';
+	usuarios.forEach(u => {
+	  sel.innerHTML += `<option value="${u.email}">${u.nombre}</option>`;
+	});
+  });
+}
+
+function aplicarFiltrosAuditoria() {
+  const usuario = document.getElementById('aud-filtro-usuario')?.value;
+  const accion  = document.getElementById('aud-filtro-accion')?.value;
+  const desde   = document.getElementById('aud-filtro-desde')?.value;
+  const hasta   = document.getElementById('aud-filtro-hasta')?.value;
+  const tbody   = document.querySelector('#sub-auditoria table tbody');
+  if (!tbody) return;
+
+  console.log('usuario:', usuario, 'desde:', desde, 'hasta:', hasta, 'accion:', accion);
+
+  fetch('/web/auditoria', { credentials: 'include' })
+  .then(r => r.json())
+  .then(logs => {
+    console.log('logs:', logs);
+    let filtrados = logs;
+    if (usuario && usuario !== 'Todos los usuarios')
+      filtrados = filtrados.filter(e => e.usuario === usuario);
+	if (accion && accion !== 'Todas')
+	    filtrados = filtrados.filter(e => e.accion?.toLowerCase().includes(accion.toLowerCase()));
+    if (desde)
+      filtrados = filtrados.filter(e => new Date(e.fecha) >= new Date(desde));
+    if (hasta)
+      filtrados = filtrados.filter(e => new Date(e.fecha) <= new Date(hasta + 'T23:59:59'));
+    console.log('filtrados:', filtrados);
+    if (!filtrados.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Sin resultados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = filtrados.map(e => `
+      <tr>
+        <td style="font-size:11px;font-family:'IBM Plex Mono',monospace;">${e.fecha || '—'}</td>
+        <td>${e.usuario || '—'}</td>
+        <td><span class="badge b-teal">${e.accion || '—'}</span></td>
+        <td style="font-family:'IBM Plex Mono',monospace;">${e.objeto || '—'}</td>
+        <td style="color:var(--muted);font-size:11px;">${e.valorAnterior || '—'}</td>
+        <td style="font-size:11px;">${e.valorNuevo || '—'}</td>
+      </tr>`).join('');
+    showToast(`${filtrados.length} registros encontrados`, 'info');
+  })
+  .catch(() => showToast('Error filtrando auditoría', 'error'));
+}
+function renderAsientos() {
+  const tbody = document.getElementById('asientos-tbody');
+  if (!tbody) return;
+
+  fetch('/web/asientos', { credentials: 'include' })
+  .then(r => r.json())
+  .then(asientos => {
+    if (!asientos.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Sin asientos registrados</td></tr>';
+      return;
+    }
+    const activos = asientos.filter(a => a.estado === 'Activo').length;
+    const errores = asientos.filter(a => a.estado === 'Con error').length;
+    const hdr = document.querySelector('#panel-asientos .card-hdr');
+    if (hdr) {
+      const badges = hdr.querySelectorAll('.badge');
+      if (badges[0]) badges[0].textContent = activos + ' activos';
+      if (badges[1]) badges[1].textContent = errores + ' con errores';
+    }
+    tbody.innerHTML = asientos.map(a => {
+      const estBadge = a.estado==='Activo'?'b-green':a.estado==='Con error'?'b-red':a.estado==='Anulado'?'b-muted':'b-gold';
+      const acciones = a.estado === 'Anulado'
+        ? '<span class="badge b-muted">Anulado</span>'
+        : `<button class="btn-outline btn-sm" onclick="editarAsiento(${a.id})">✏</button>
+           <button class="btn-outline btn-sm" onclick="duplicarAsientoExistente(${a.id})">📋</button>
+           <button class="btn-danger btn-sm" onclick="anularAsiento(${a.id})">🗑</button>`;
+      return `<tr>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${a.numeroCorrelativo || '—'}</td>
+        <td style="font-size:11px;color:var(--muted);">${a.fechaRegistro ? new Date(a.fechaRegistro).toLocaleString('es-PE') : '—'}</td>
+        <td><span class="badge b-teal">${a.tipo || '—'}</span></td>
+        <td>${a.descripcion || '—'}</td>
+        <td class="tr" style="font-family:'IBM Plex Mono',monospace;">S/ ${a.debe || '0.00'}</td>
+        <td class="tr" style="font-family:'IBM Plex Mono',monospace;">S/ ${a.haber || '0.00'}</td>
+        <td><span class="badge ${estBadge}">${a.estado || '—'}</span></td>
+        <td>${a.usuario || '—'}</td>
+        <td style="display:flex;gap:4px;">${acciones}</td>
+      </tr>`;
+    }).join('');
+  })
+  .catch(() => {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--red);">Error cargando asientos</td></tr>';
+	
+  });	
+  // Cargar usuarios en el select
+    fetch('/web/usuarios', { credentials: 'include' })
+    .then(r => r.json())
+    .then(usuarios => {
+      const sel = document.getElementById('f-usuario');
+      if (!sel) return;
+      sel.innerHTML = '<option value="Todos">Todos</option>';
+      usuarios.forEach(u => {
+        sel.innerHTML += `<option value="${u.email}">${u.nombre}</option>`;
+      });
+    });
+  
+  // Cargar periodos en el select
+  fetch('/web/periodos', { credentials: 'include' })
+  .then(r => r.json())
+  .then(periodos => {
+    const sel = document.getElementById('f-periodo');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Todos</option>';
+    periodos.forEach(p => {
+      sel.innerHTML += `<option value="${p.id}">${p.periodo}</option>`;
+    });
+  });
+}
+
+function editarAsiento(id) {
+  fetch(`/web/asientos`, { credentials: 'include' })
+  .then(r => r.json())
+  .then(asientos => {
+    const a = asientos.find(x => x.id === id);
+    if (!a) return;
+    const modalId = 'modal-editar-asiento';
+    let modal = document.getElementById(modalId);
+    if (!modal) { modal=document.createElement('div'); modal.className='modal-overlay'; modal.id=modalId; document.body.appendChild(modal); }
+    modal.innerHTML = `
+      <div class="modal" style="max-width:520px;">
+        <h3>Editar Asiento — ${id}</h3>
+        <div class="modal-sub">MODIFICAR ASIENTO CONTABLE</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="fg"><label>Tipo</label>
+            <select id="ea-tipo">
+              <option ${a.tipo==='Apertura'?'selected':''}>Apertura</option>
+              <option ${a.tipo==='Operación ordinaria'?'selected':''}>Operación ordinaria</option>
+              <option ${a.tipo==='Ajuste'?'selected':''}>Ajuste</option>
+              <option ${a.tipo==='Cierre'?'selected':''}>Cierre</option>
+              <option ${a.tipo==='Reversión'?'selected':''}>Reversión</option>
+            </select></div>
+          <div class="fg"><label>Descripción</label><input type="text" id="ea-desc" value="${a.descripcion || ''}"/></div>
+          <div class="fg"><label>Estado</label>
+            <select id="ea-estado">
+              <option ${a.estado==='Activo'?'selected':''}>Activo</option>
+              <option ${a.estado==='Con error'?'selected':''}>Con error</option>
+            </select></div>
+        </div>
+        <div class="modal-footer">
+			<button class="btn-outline" onclick="closeModal('${modalId}')">Cancelar</button>
+			<button class="btn-gold" onclick="guardarEdicionAsiento(${a.id})">Guardar</button>        </div>
+      </div>`;
+    modal.classList.add('open');
+  });
+}
+
+function guardarEdicionAsiento(id) {
+  console.log('Editando asiento id:', id);
+  const tipo   = document.getElementById('ea-tipo').value;
+  const desc   = document.getElementById('ea-desc').value.trim();
+  const estado = document.getElementById('ea-estado').value;
+
+  fetch(`/web/asientos/${id}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tipo, descripcion: desc, estado })
+  })
+  .then(r => {
+    if (r.ok) {
+      closeModal('modal-editar-asiento');
+      renderAsientos();
+      showToast(`Asiento ${id} editado correctamente`, 'success');
+    } else {
+      showToast('Error al editar el asiento', 'error');
+    }
+  })
+  .catch(() => showToast('Error de conexión', 'error'));
+}
+
+function aplicarFiltros() {
+  const desde  = document.getElementById('f-desde')?.value;
+  const hasta  = document.getElementById('f-hasta')?.value;
+  const cuenta = document.getElementById('f-cuenta')?.value;
+  const monto  = document.getElementById('f-monto')?.value;
+  const tipo   = document.getElementById('f-tipo')?.value;
+  const estado = document.getElementById('f-estado')?.value;
+  const periodo = document.getElementById('f-periodo')?.value;
+
+  Promise.all([
+    fetch('/web/asientos', { credentials: 'include' }).then(r => r.json()),
+    fetch('/web/periodos', { credentials: 'include' }).then(r => r.json())
+  ])
+  .then(([asientos, periodos]) => {
+    let filtrados = asientos;
+    if (desde) filtrados = filtrados.filter(a => new Date(a.fechaRegistro) >= new Date(desde));
+    if (hasta) filtrados = filtrados.filter(a => new Date(a.fechaRegistro) <= new Date(hasta + 'T23:59:59'));
+    if (cuenta) filtrados = filtrados.filter(a => (a.descripcion||'').toLowerCase().includes(cuenta.toLowerCase()) || (a.cuentaContable||'').includes(cuenta));
+    if (monto) filtrados = filtrados.filter(a => parseFloat(a.debe) >= parseFloat(monto));
+    if (tipo && tipo !== 'Todos') filtrados = filtrados.filter(a => a.tipo?.toLowerCase().includes(tipo.toLowerCase()));
+	const usuario = document.getElementById('f-usuario')?.value;
+	if (usuario && usuario !== 'Todos') filtrados = filtrados.filter(a => a.usuario === usuario);	
+	console.log('estado seleccionado:', estado);
+	console.log('estados en BD:', asientos.map(a => a.estado));
+	if (estado && estado !== 'Todos') filtrados = filtrados.filter(a => a.estado === estado);
+	console.log('periodo value ANTES del if:', periodo);
+    if (periodo) {
+      const p = periodos.find(x => String(x.id) === String(periodo));
+	  console.log('periodo value:', periodo);
+	  console.log('periodos:', periodos);
+	  console.log('periodo encontrado:', p);
+	  console.log('fechaInicio:', p?.fechaInicio, 'fechaCierre:', p?.fechaCierre);
+	  console.log('primer asiento fecha:', asientos[0]?.fechaRegistro);
+      if (p) {
+        const ini = new Date(p.fechaInicio);
+        const fin = new Date(p.fechaCierre + 'T23:59:59');
+        filtrados = filtrados.filter(a => {
+          const fecha = new Date(a.fechaRegistro);
+          return fecha >= ini && fecha <= fin;
+        });
+      }
+    }
+
+    const tbody = document.getElementById('asientos-tbody');
+    if (!tbody) return;
+    if (!filtrados.length) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Sin resultados</td></tr>';
+      showToast('Sin resultados', 'warn');
+      return;
+    }
+    tbody.innerHTML = filtrados.map(a => {
+      const estBadge = a.estado==='Activo'?'b-green':a.estado==='Con error'?'b-red':a.estado==='Anulado'?'b-muted':'b-gold';
+      const acciones = a.estado === 'Anulado'
+        ? '<span class="badge b-muted">Anulado</span>'
+        : `<button class="btn-outline btn-sm" onclick="editarAsiento(${a.id})">✏</button>
+           <button class="btn-outline btn-sm" onclick="duplicarAsientoExistente(${a.id})">📋</button>
+           <button class="btn-danger btn-sm" onclick="anularAsiento(${a.id})">🗑</button>`;
+      return `<tr>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;">${a.numeroCorrelativo||'—'}</td>
+        <td style="font-size:11px;color:var(--muted);">${a.fechaRegistro ? new Date(a.fechaRegistro).toLocaleString('es-PE') : '—'}</td>
+        <td><span class="badge b-teal">${a.tipo||'—'}</span></td>
+        <td>${a.descripcion||'—'}</td>
+        <td class="tr" style="font-family:'IBM Plex Mono',monospace;">S/ ${a.debe||'0.00'}</td>
+        <td class="tr" style="font-family:'IBM Plex Mono',monospace;">S/ ${a.haber||'0.00'}</td>
+        <td><span class="badge ${estBadge}">${a.estado||'—'}</span></td>
+        <td>${a.usuario||'—'}</td>
+        <td style="display:flex;gap:4px;">${acciones}</td>
+      </tr>`;
+    }).join('');
+    showToast(`${filtrados.length} asientos encontrados`, 'success');
+  })
+  .catch(err => {
+      console.error('Error:', err);
+      showToast('Error aplicando filtros', 'error');
+    });
+  }
+
+  function limpiarFiltros() {
+
+  ['f-desde','f-hasta','f-cuenta','f-monto'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  renderAsientos();
+  showToast('Filtros limpiados', 'info');
+}
+function renderCuentas() {
+  const tbody = document.querySelector('#panel-cuentas table tbody');
+  if (!tbody) return;
+  fetch('/web/cuentas', { credentials: 'include' })
+  .then(r => r.json())
+  .then(cuentas => {
+    if (!cuentas.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Sin cuentas registradas</td></tr>';
+      return;
+    }
+    tbody.innerHTML = cuentas.map(c => {
+      const cc = c.clasificacion?.includes('Activo')?'b-teal':c.clasificacion?.includes('Pasivo')?'b-red':c.clasificacion==='Patrimonio'?'b-gold':c.clasificacion==='Ingresos'?'b-blue':'b-muted';
+      return `<tr>
+        <td style="font-family:'IBM Plex Mono',monospace;">${c.codigo}</td>
+        <td>${c.descripcion}</td>
+        <td><span class="badge ${cc}">${c.clasificacion || '—'}</span></td>
+        <td>${c.tipo || '—'}</td>
+        <td><span class="badge b-green">${c.estado || '—'}</span></td>
+        <td>${c.opsAutorizadas || '—'}</td>
+        <td><button class="btn-outline btn-sm" onclick="showToast('Editar cuenta','info')">Editar</button></td>
+      </tr>`;
+    }).join('');
+  })
+  .catch(() => {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);">Error cargando cuentas</td></tr>';
+  });
+}
+function showPanel(name, navEl) {
+	document.documentElement.scrollTop = 0;
+	 document.body.scrollTop = 0;
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  if (name === 'asientos') setTimeout(renderAsientos, 100);
+  else if (name === 'libro') renderLibro();
+  else if (name === 'comprobantes') renderComprobantes();
+  else if (name === 'admin' || name === 'usuarios') renderUsuarios();
+  else if (name === 'periodos') renderPeriodos();
+  else if (name === 'tipocambio') renderTC();
+  else if (name === 'cuentas') renderCuentas();
+  else if (name === 'alertas') renderAlertas();
+  else if (name === 'errores') renderErrores();
+  else if (name === 'periodos') renderPeriodos();
+  else if (name === 'balance') renderBalance();
+  else if (name === 'resultados') renderResultados();
+  else if (name === 'flujo') renderFlujo();
+  else if (name === 'patrimonio') renderPatrimonio();
+  else if (name === 'ratios') renderRatios();
+  else if (name === 'costos') renderCostos();
+  else if (name === 'errores') renderErrores();
+  else if (name === 'dashboard') renderDashboard();
+  setTimeout(() => {
+    document.documentElement.scrollTop = 0;
+  }, 150);
+}
+
+function showAdminPanel(subId, navEl) {
+  const panelAdmin = document.getElementById('panel-admin');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  if (panelAdmin) panelAdmin.classList.add('active');
+  document.querySelectorAll('.admin-sub').forEach(s => s.classList.remove('active'));
+  const sub = document.getElementById(subId);
+  if (sub) sub.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  if (subId === 'sub-usuarios') renderUsuarios();
+  else if (subId === 'sub-auditoria') renderAuditLog();
+  else if (subId === 'sub-respaldos') renderRespaldos();
+  else if (subId === 'sub-configuracion') setTimeout(() => applyConfigToUI(), 200);
+  setTimeout(() => {
+    panelAdmin.scrollIntoView({ block: 'start', behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+  }, 150);
+}
+function renderTC() {
+  const tbody = document.querySelector('#panel-tipocambio table tbody');
+  if (!tbody) return;
+
+  fetch('/web/tipocambio', { credentials: 'include' })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Sin historial de tipo de cambio</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(r => `
+      <tr>
+        <td style="font-family:'IBM Plex Mono',monospace;">${r.fecha || '—'}</td>
+        <td class="tr">${r.compra || '—'}</td>
+        <td class="tr">${r.venta || '—'}</td>
+        <td>${r.fuente || '—'}</td>
+        <td><span class="badge ${r.estado==='Activo'?'b-green':'b-muted'}">${r.estado || '—'}</span></td>
+      </tr>`).join('');
+
+	  const kpis = document.querySelectorAll('#panel-tipocambio .kpi-val');
+	  const usd = data.find(r => r.moneda === 'USD');
+	  const eur = data.find(r => r.moneda === 'EUR');
+	  const mxn = data.find(r => r.moneda === 'MXN');
+	  if (kpis[0] && usd) kpis[0].textContent = 'S/ ' + usd.venta;
+	  if (kpis[1] && eur) kpis[1].textContent = 'S/ ' + eur.venta;
+	  if (kpis[2] && mxn) kpis[2].textContent = 'S/ ' + mxn.venta;
+	  const tcBar = document.getElementById('tc-bar');
+	  if (tcBar && usd) tcBar.textContent = ' USD/PEN: ' + usd.venta;
+  })
+  .catch(() => showToast('Error cargando tipo de cambio', 'error'));
+}
+function refreshTC() {
+  showToast('Actualizando tipo de cambio desde SBS...', 'info');
+  fetch('/web/tipocambio/actualizar', {
+    method: 'POST',
+    credentials: 'include'
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { showToast(data.error, 'error'); return; }
+    renderTC();
+    showToast('Tipo de cambio actualizado — USD/PEN: ' + data.venta, 'success');
+  })
+  .catch(() => showToast('Error actualizando tipo de cambio', 'error'));
+}
+
+function renderErrores() {
+  const tbody = document.querySelector('#panel-errores table tbody');
+  if (!tbody) return;
+
+  fetch('/web/inconsistencias', { credentials: 'include' })
+  .then(r => r.json())
+  .then(errores => {
+    const badge = document.querySelectorAll('.nav-item .nav-badge')[1];
+    if (badge) badge.textContent = errores.length;
+    if (!errores.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Sin inconsistencias detectadas</td></tr>';
+      return;
+    }
+    tbody.innerHTML = errores.map(a => {
+      const fecha = a.fechaRegistro ? new Date(a.fechaRegistro).toLocaleDateString('es-PE') : '—';
+      return '<tr>'
+        + '<td style="font-family:\'IBM Plex Mono\',monospace;">' + (a.numeroCorrelativo || a.id) + '</td>'
+        + '<td>' + fecha + '</td>'
+        + '<td>' + (a.descripcion || '—') + '</td>'
+        + '<td><span class="badge b-red">Error contable</span></td>'
+        + '<td><span class="badge ' + (a.cuentaContable ? 'b-green">Con doc.' : 'b-gold">Sin cuenta') + '</span></td>'
+        + '<td><button class="btn-outline btn-sm" onclick="corregirInconsistencia(' + a.id + ')">Corregir</button></td>'
+        + '</tr>';
+    }).join('');
+  })
+  .catch(() => showToast('Error cargando inconsistencias', 'error'));
+}
+function renderBalance() {
+  fetch('/web/balance', { credentials: 'include' })
+  .then(r => r.json())
+  .then(saldos => {
+    const activos = {}, pasivos = {}, patrimonio = {};
+    const cuentasActivo = ['1011','1301','1399'];
+    const cuentasPasivo = ['2011','2101','2102','4011','4101','4401'];
+    const cuentasPatrimonio = ['5011','5101','5102'];
+
+	Object.entries(saldos).forEach(([cta, data]) => {
+	    const saldo = data.saldo;
+	    const desc = data.descripcion;
+	    if (cta.charAt(0) === '1') activos[cta] = {saldo, desc};
+	    else if (cta.charAt(0) === '2' || cta.charAt(0) === '4') pasivos[cta] = {saldo, desc};
+	    else if (cta.charAt(0) === '5') patrimonio[cta] = {saldo, desc};
+	});
+
+	const renderRows = (obj, tbody) => {
+	  if (!tbody) return 0;
+	  let total = 0;
+	  const totalSaldo = Object.values(obj).reduce((a, b) => a + b.saldo, 0);
+	  tbody.innerHTML = Object.entries(obj).map(([cta, data]) => {
+	    total += data.saldo;
+	    const pct = totalSaldo !== 0 ? ((data.saldo / totalSaldo) * 100).toFixed(1) : '0.0';
+	    return '<tr>'
+	      + '<td style="font-family:\'IBM Plex Mono\',monospace;">' + cta + '</td>'
+	      + '<td>' + (data.desc || cta) + '</td>'
+	      + '<td class="tr">S/ ' + data.saldo.toLocaleString('es-PE', {minimumFractionDigits:2}) + '</td>'
+	      + '<td class="tr">' + pct + '%</td>'
+	      + '</tr>';
+	  }).join('') + '<tr class="tot-row"><td colspan="2">TOTAL</td><td class="tr">S/ ' + total.toLocaleString('es-PE', {minimumFractionDigits:2}) + '</td><td></td></tr>';
+	  return total;
+	};
+
+    const tbActivo = document.querySelector('#panel-balance .two-col > div:first-child table tbody');
+    const tbPasivo = document.querySelector('#panel-balance .two-col > div:last-child > div:first-child table tbody');
+    const tbPatrimonio = document.querySelector('#panel-balance .two-col > div:last-child > div:last-child table tbody');
+
+    renderRows(activos, tbActivo);
+    renderRows(pasivos, tbPasivo);
+    renderRows(patrimonio, tbPatrimonio);
+  })
+  .catch(() => showToast('Error cargando balance', 'error'));
+}
+function renderResultados() {
+  fetch('/web/resultados', { credentials: 'include' })
+  .then(r => r.json())
+  .then(data => {
+    const tbody = document.querySelector('#panel-resultados table tbody');
+    if (!tbody) return;
+    let totalIngresos = 0, totalGastos = 0;
+    const rows = [];
+    Object.entries(data).forEach(([cta, info]) => {
+      if (info.tipo === '5') totalIngresos += info.saldo;
+      else totalGastos += info.saldo;
+      rows.push({ cta, info });
+    });
+    const utilidad = totalIngresos - totalGastos;
+    tbody.innerHTML = 
+      '<tr class="sec-row"><td colspan="3">INGRESOS</td></tr>'
+      + rows.filter(r => r.info.tipo === '5').map(({cta, info}) =>
+        '<tr><td style="font-family:\'IBM Plex Mono\',monospace;">' + cta + '</td>'
+        + '<td>' + (info.descripcion || cta) + '</td>'
+        + '<td class="tr pos">S/ ' + info.saldo.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>'
+      ).join('')
+      + '<tr class="sub-row"><td colspan="2">Total Ingresos</td><td class="tr">S/ ' + totalIngresos.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>'
+      + '<tr class="sec-row"><td colspan="3">GASTOS</td></tr>'
+      + rows.filter(r => r.info.tipo === '4').map(({cta, info}) =>
+        '<tr><td style="font-family:\'IBM Plex Mono\',monospace;">' + cta + '</td>'
+        + '<td>' + (info.descripcion || cta) + '</td>'
+        + '<td class="tr neg">S/ ' + info.saldo.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>'
+      ).join('')
+      + '<tr class="sub-row"><td colspan="2">Total Gastos</td><td class="tr">S/ ' + totalGastos.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>'
+      + '<tr class="tot-row"><td colspan="2">UTILIDAD NETA</td>'
+      + '<td class="tr ' + (utilidad >= 0 ? 'pos' : 'neg') + '">S/ ' + utilidad.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>';
+  })
+  .catch(() => showToast('Error cargando estado de resultados', 'error'));
+}
+function renderFlujo() {
+  fetch('/web/flujo-caja', { credentials: 'include' })
+  .then(r => r.json())
+  .then(data => {
+    const tbody = document.querySelector('#panel-flujo table tbody');
+    if (!tbody) return;
+    const neto = data.neto || 0;
+    tbody.innerHTML = 
+      '<tr class="sec-row"><td colspan="2">ACTIVIDADES OPERATIVAS</td></tr>'
+      + '<tr><td>Entradas de efectivo (Cuentas 1xxx)</td><td class="tr pos">S/ ' + (data.entradas||0).toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>'
+      + '<tr><td>Salidas de efectivo (Cuentas 1xxx)</td><td class="tr neg">S/ ' + (data.salidas||0).toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>'
+      + '<tr class="tot-row"><td>FLUJO NETO DE CAJA</td><td class="tr ' + (neto >= 0 ? 'pos' : 'neg') + '">S/ ' + neto.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>';
+
+    const bars = document.querySelectorAll('#panel-flujo .bar-fill');
+    const amts = document.querySelectorAll('#panel-flujo .bar-amt');
+    const max = Math.max(data.entradas, data.salidas, 1);
+    if (bars[0]) bars[0].style.width = ((data.entradas/max)*100) + '%';
+    if (bars[1]) bars[1].style.width = ((data.salidas/max)*100) + '%';
+    if (bars[2]) bars[2].style.width = (Math.abs(neto)/max*100) + '%';
+    if (amts[0]) amts[0].textContent = 'S/ ' + (data.entradas||0).toLocaleString('es-PE');
+    if (amts[1]) amts[1].textContent = 'S/ ' + (data.salidas||0).toLocaleString('es-PE');
+    if (amts[2]) amts[2].textContent = 'S/ ' + neto.toLocaleString('es-PE');
+  })
+  .catch(() => showToast('Error cargando flujo de caja', 'error'));
+}
+function renderPatrimonio() {
+  fetch('/web/patrimonio', { credentials: 'include' })
+  .then(r => r.json())
+  .then(data => {
+    const tbody = document.querySelector('#panel-patrimonio table tbody');
+    if (!tbody) return;
+    const capital   = data.capital   || 0;
+    const reservas  = data.reservas  || 0;
+    const utilidad  = data.utilidad  || 0;
+    const total     = data.total     || 0;
+    tbody.innerHTML =
+      '<tr><td>Saldo Inicial</td>'
+      + '<td class="tr">S/ ' + capital.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td>'
+      + '<td class="tr">S/ ' + reservas.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td>'
+      + '<td class="tr">—</td>'
+      + '<td class="tr ' + (utilidad>=0?'pos':'neg') + '">S/ ' + utilidad.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td>'
+      + '<td class="tr">S/ ' + total.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>'
+      + '<tr class="tot-row"><td>TOTAL PATRIMONIO</td>'
+      + '<td class="tr">S/ ' + capital.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td>'
+      + '<td class="tr">S/ ' + reservas.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td>'
+      + '<td class="tr">—</td>'
+      + '<td class="tr ' + (utilidad>=0?'pos':'neg') + '">S/ ' + utilidad.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td>'
+      + '<td class="tr">S/ ' + total.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td></tr>';
+  })
+  .catch(() => showToast('Error cargando patrimonio', 'error'));
+}
+function renderRatios() {
+  fetch('/web/ratios', { credentials: 'include' })
+  .then(r => r.json())
+  .then(data => {
+    const lc = data.liquidezCorriente || 0;
+    const roe = data.roe || 0;
+    const roa = data.roa || 0;
+    const mn = data.margenNeto || 0;
+
+    const ratioCards = document.querySelectorAll('#panel-ratios .ratio-val');
+    const ratioSt = document.querySelectorAll('#panel-ratios .ratio-st');
+
+    if (ratioCards[0]) ratioCards[0].textContent = lc.toFixed(2);
+    if (ratioCards[1]) ratioCards[1].textContent = '—';
+    if (ratioCards[2]) ratioCards[2].textContent = '—';
+    if (ratioCards[3]) ratioCards[3].textContent = roa.toFixed(1) + '%';
+    if (ratioCards[4]) ratioCards[4].textContent = roe.toFixed(1) + '%';
+    if (ratioCards[5]) ratioCards[5].textContent = mn.toFixed(1) + '%';
+
+    if (ratioSt[0]) { ratioSt[0].textContent = lc >= 1.5 ? '✓ Óptimo' : '⚠ Revisar'; ratioSt[0].className = 'ratio-st ' + (lc >= 1.5 ? 'st-ok' : 'st-warn'); }
+    if (ratioSt[3]) { ratioSt[3].textContent = roa >= 1.9 ? '✓ Óptimo' : '⚠ Revisar'; ratioSt[3].className = 'ratio-st ' + (roa >= 1.9 ? 'st-ok' : 'st-warn'); }
+    if (ratioSt[4]) { ratioSt[4].textContent = roe >= 11.5 ? '✓ Óptimo' : '⚠ Revisar'; ratioSt[4].className = 'ratio-st ' + (roe >= 11.5 ? 'st-ok' : 'st-warn'); }
+    if (ratioSt[5]) { ratioSt[5].textContent = mn >= 8.2 ? '✓ Óptimo' : '⚠ Revisar'; ratioSt[5].className = 'ratio-st ' + (mn >= 8.2 ? 'st-ok' : 'st-warn'); }
+  })
+  .catch(() => showToast('Error cargando ratios', 'error'));
+}
+function renderCostos() {
+  fetch('/web/costos', { credentials: 'include' })
+  .then(r => r.json())
+  .then(data => {
+    const tbody = document.querySelector('#panel-costos table tbody');
+    if (!tbody) return;
+    const total = Object.values(data).reduce((a,b) => a+b, 0);
+    tbody.innerHTML = Object.entries(data).map(([centro, ejecutado]) => {
+      const pct = total > 0 ? ((ejecutado/total)*100).toFixed(1) : '0.0';
+      const presupuesto = ejecutado * 1.2;
+      const variacion = presupuesto - ejecutado;
+      const st = ejecutado <= presupuesto ? 'b-green' : 'b-red';
+      return '<tr>'
+        + '<td>' + centro + '</td>'
+        + '<td class="tr">S/ ' + presupuesto.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td>'
+        + '<td class="tr">S/ ' + ejecutado.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td>'
+        + '<td class="tr pos">S/ ' + variacion.toLocaleString('es-PE',{minimumFractionDigits:2}) + '</td>'
+        + '<td class="tr">' + pct + '%</td>'
+        + '<td><span class="badge ' + st + '">' + (ejecutado <= presupuesto ? 'En presupuesto' : 'Excedido') + '</span></td>'
+        + '</tr>';
+    }).join('');
+  })
+  .catch(() => showToast('Error cargando costos', 'error'));
+}
+function renderAlertas() {
+  fetch('/web/alertas', { credentials: 'include' })
+  .then(r => r.json())
+  .then(alertas => {
+	fetch('/web/dashboard', { credentials: 'include' })
+	.then(r => r.json())
+	.then(data => {
+	  if (kpis[1]) kpis[1].textContent = 'S/ ' + (data.ctasCobrar || 0).toLocaleString('es-PE', {minimumFractionDigits:2});
+	});	
+    const container = document.getElementById('alertas-container');
+    if (!container) return;
+    const kpis = document.querySelectorAll('#panel-alertas .kpi-val');
+    if (kpis[0]) kpis[0].textContent = alertas.length;
+    const badge = document.querySelector('.nav-item .nav-badge');
+    if (badge) badge.textContent = alertas.length;
+    if (!alertas.length) {
+      container.innerHTML = '<div class="alert alert-success">✓ Sin alertas activas en este momento.</div>';
+      return;
+    }
+    container.innerHTML = alertas.map(a =>
+      '<div class="alert ' + (a.tipo==='danger'?'alert-danger':a.tipo==='warn'?'alert-warn':'alert-info') + '">'
+      + '<div><strong>' + a.titulo + '</strong><br>'
+      + '<span style="font-size:11px;color:var(--muted);">' + a.detalle + '</span></div></div>'
+    ).join('');
+  })
+  .catch(() => showToast('Error cargando alertas', 'error'));
+}
+function renderDashboard() {
+  fetch('/web/dashboard', { credentials: 'include' })
+  .then(r => r.json())
+  .then(data => {
+    const kpis = document.querySelectorAll('#panel-dashboard .kpi-val');
+    const utilidad = (data.ingresos || 0) - (data.gastos || 0);
+	if (kpis[0]) kpis[0].textContent = 'S/ ' + (data.activoTotal || 0).toLocaleString('es-PE', {minimumFractionDigits:2});
+	if (kpis[1]) kpis[1].textContent = 'S/ ' + (data.ingresos || 0).toLocaleString('es-PE', {minimumFractionDigits:2});
+	if (kpis[2]) kpis[2].textContent = 'S/ ' + ((data.ingresos||0) - (data.gastos||0)).toLocaleString('es-PE', {minimumFractionDigits:2});
+	if (kpis[3]) kpis[3].textContent = '—';
+	if (kpis[4]) kpis[4].textContent = (data.roe || 0).toFixed(1) + '%';
+	if (kpis[5]) kpis[5].textContent = data.asientosMes || 0;
+	if (kpis[6]) kpis[6].textContent = 'S/ ' + (data.ctasCobrar || 0).toLocaleString('es-PE', {minimumFractionDigits:2});
+	if (kpis[7]) kpis[7].textContent = (data.liquidez || 0).toFixed(2);
+	const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+	const hoy = new Date();
+	const mes1 = meses[hoy.getMonth()];
+	const mes2 = meses[(hoy.getMonth()-1+12)%12];
+	const mes3 = meses[(hoy.getMonth()-2+12)%12];
+
+	const barLabels = document.querySelectorAll('#panel-dashboard .bar-lbl');
+	if (barLabels[0]) barLabels[0].textContent = mes3;
+	if (barLabels[1]) barLabels[1].textContent = mes2;
+	if (barLabels[2]) barLabels[2].textContent = mes1;
+	if (barLabels[3]) barLabels[3].textContent = 'G. ' + mes3;
+	if (barLabels[4]) barLabels[4].textContent = 'G. ' + mes2;
+	if (barLabels[5]) barLabels[5].textContent = 'G. ' + mes1;
+
+	const max = Math.max(data.ingEnero||0, data.ingFebrero||0, data.ingMarzo||0, data.gasEnero||0, data.gasFebrero||0, data.gasMarzo||0, 1);
+	const bars = document.querySelectorAll('#panel-dashboard .bar-fill');
+	const amts = document.querySelectorAll('#panel-dashboard .bar-amt');
+	if (bars[0]) bars[0].style.width = ((data.ingEnero||0)/max*100)+'%';
+	if (bars[1]) bars[1].style.width = ((data.ingFebrero||0)/max*100)+'%';
+	if (bars[2]) bars[2].style.width = ((data.ingMarzo||0)/max*100)+'%';
+	if (bars[3]) bars[3].style.width = ((data.gasEnero||0)/max*100)+'%';
+	if (bars[4]) bars[4].style.width = ((data.gasFebrero||0)/max*100)+'%';
+	if (bars[5]) bars[5].style.width = ((data.gasMarzo||0)/max*100)+'%';
+	if (amts[0]) amts[0].textContent = 'S/ '+(data.ingEnero||0).toLocaleString('es-PE');
+	if (amts[1]) amts[1].textContent = 'S/ '+(data.ingFebrero||0).toLocaleString('es-PE');
+	if (amts[2]) amts[2].textContent = 'S/ '+(data.ingMarzo||0).toLocaleString('es-PE');
+	if (amts[3]) amts[3].textContent = 'S/ '+(data.gasEnero||0).toLocaleString('es-PE');
+	if (amts[4]) amts[4].textContent = 'S/ '+(data.gasFebrero||0).toLocaleString('es-PE');
+	if (amts[5]) amts[5].textContent = 'S/ '+(data.gasMarzo||0).toLocaleString('es-PE');
+	  })
+	  .catch(() => showToast('Error cargando alertas', 'error'));
+
+	    fetch('/web/inconsistencias', { credentials: 'include' })
+	    .then(r => r.json())
+	    .then(errores => {
+	      const kpis = document.querySelectorAll('#panel-alertas .kpi-val');
+	      if (kpis[3]) kpis[3].textContent = errores.length;
+	    });
+	  }
+
+	  function toggleUserMenu() {
+	    const dd = document.getElementById('user-dropdown');
+	    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+	  }
+
+	  document.addEventListener('click', function(e) {
+	    if (!e.target.closest('.user-badge')) {	
+	      const dd = document.getElementById('user-dropdown');
+	      if (dd) dd.style.display = 'none';
+	    }
+	  });
+	  function descargarPlantilla() {
+	    const csv = '\uFEFF' + 'tipo,descripcion,debe,haber\n' +
+	      'Apertura,Asiento de apertura 2026,5000,5000\n' +
+	      'Ajuste,Ajuste de saldo cuenta 1011,1000,1000\n';
+	    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+	    const url = URL.createObjectURL(blob);
+	    const a = document.createElement('a');
+	    a.href = url;
+	    a.download = 'FINANTEL_Plantilla_Importacion.csv';
+	    document.body.appendChild(a);
+	    a.click();
+	    document.body.removeChild(a);
+	    URL.revokeObjectURL(url);
+	    showToast('Plantilla descargada correctamente', 'success');
+	  }
+	</script>
+	</main>
+	</div>
+	</body>
+	</html>

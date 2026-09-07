@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+	<!-- DASHBOARD -->
+	<div th:fragment="panel-dashboard" id="panel-dashboard" class="panel active">
+	  <div class="sec-hdr">
+	    <div><div class="sec-title">Dashboard Ejecutivo</div><div class="sec-sub">FINANTEL S.A.C. · PERIODO: T1 2026 · COOPERATIVA DE AHORRO Y CRÉDITO</div></div>
+	    <div class="btns-row">
+	      <button class="btn-outline btn-sm" onclick="exportPDF()">📄 PDF</button>
+	      <button class="btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button>
+	    </div>
+	  </div>
+
+	  <div id="dash-alerts-area"></div>
+
+	  <div class="kpi-grid">
+	    <div class="kpi-card"><div class="kpi-lbl">Activo Total</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+	    <div class="kpi-card"><div class="kpi-lbl">Ingresos T1</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+	    <div class="kpi-card"><div class="kpi-lbl">Utilidad Neta</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+	    <div class="kpi-card"><div class="kpi-lbl">Morosidad</div><div class="kpi-val">—</div><div class="kpi-d warn">—</div></div>
+	    <div class="kpi-card"><div class="kpi-lbl">ROE</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+	    <div class="kpi-card"><div class="kpi-lbl">Asientos Mes</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+	    <div class="kpi-card"><div class="kpi-lbl">Ctas por Cobrar</div><div class="kpi-val">—</div><div class="kpi-d warn">—</div></div>
+	    <div class="kpi-card"><div class="kpi-lbl">Liquidez</div><div class="kpi-val">—</div><div class="kpi-d up">—</div></div>
+	  </div>
+
+	  <div class="two-col">
+	    <div class="card">
+	      <div class="card-hdr"><div class="card-title">📊 Ingresos vs Gastos — T1 2026</div></div>
+	      <div class="card-body">
+	        <div class="bar-chart">
+	          <div class="bar-row"><div class="bar-lbl">Enero</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#c9a84c,#e8c87a)"></div></div><div class="bar-amt">S/ 0</div></div>
+	          <div class="bar-row"><div class="bar-lbl">Febrero</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#c9a84c,#e8c87a)"></div></div><div class="bar-amt">S/ 0</div></div>
+	          <div class="bar-row"><div class="bar-lbl">Marzo</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#c9a84c,#e8c87a)"></div></div><div class="bar-amt">S/ 0</div></div>
+	          <div class="bar-row"><div class="bar-lbl">G. Enero</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#f87171,#fca5a5)"></div></div><div class="bar-amt">S/ 0</div></div>
+	          <div class="bar-row"><div class="bar-lbl">G. Febrero</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#f87171,#fca5a5)"></div></div><div class="bar-amt">S/ 0</div></div>
+	          <div class="bar-row"><div class="bar-lbl">G. Marzo</div><div class="bar-track"><div class="bar-fill" style="width:0%;background:linear-gradient(90deg,#f87171,#fca5a5)"></div></div><div class="bar-amt">S/ 0</div></div>
+	        </div>
+	      </div>
+	    </div>
+	    <div class="card">
+	      <div class="card-hdr"><div class="card-title">🍩 Composición del Activo</div></div>
+	      <div class="card-body">
+	        <div class="donut-wrap">
+	          <svg width="120" height="120" viewBox="0 0 120 120">
+	            <circle cx="60" cy="60" r="46" fill="none" stroke="#1a3461" stroke-width="20"/>
+	            <circle cx="60" cy="60" r="46" fill="none" stroke="#c9a84c" stroke-width="20" stroke-dasharray="176 113" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
+	            <circle cx="60" cy="60" r="46" fill="none" stroke="#2dd4bf" stroke-width="20" stroke-dasharray="49 240" stroke-dashoffset="-176" transform="rotate(-90 60 60)"/>
+	            <circle cx="60" cy="60" r="46" fill="none" stroke="#818cf8" stroke-width="20" stroke-dasharray="38 251" stroke-dashoffset="-225" transform="rotate(-90 60 60)"/>
+	            <circle cx="60" cy="60" r="46" fill="none" stroke="#f87171" stroke-width="20" stroke-dasharray="26 263" stroke-dashoffset="-263" transform="rotate(-90 60 60)"/>
+	            <text x="60" y="55" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#c9a84c" font-weight="600">100%</text>
+	            <text x="60" y="69" text-anchor="middle" font-family="IBM Plex Sans" font-size="8" fill="#64748b">del Activo</text>
+	          </svg>
+	          <div class="donut-leg">
+	            <div class="leg-item"><div class="leg-dot" style="background:#c9a84c"></div>Cartera Créditos<span class="leg-pct">61%</span></div>
+	            <div class="leg-item"><div class="leg-dot" style="background:#2dd4bf"></div>Disponible<span class="leg-pct">17%</span></div>
+	            <div class="leg-item"><div class="leg-dot" style="background:#818cf8"></div>Inversiones<span class="leg-pct">13%</span></div>
+	            <div class="leg-item"><div class="leg-dot" style="background:#f87171"></div>Otros Activos<span class="leg-pct">9%</span></div>
+	          </div>
+	        </div>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+	</div>
+
+	</body>
+	</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+	<div th:fragment="panel-admin" id="panel-admin" class="panel">
+  <div class="admin-layout">
+    <div class="admin-content">
+      <div id="sub-usuarios" class="admin-sub active">
+  <div class="sec-hdr"><div><div class="sec-title">Usuarios y Roles</div><div class="sec-sub">GESTIÓN DE ACCESOS</div></div><button class="btn-gold btn-sm" onclick="openModalUsuario()">+ Nuevo Usuario</button></div>
+  <div class="two-col">
+    <div>
+      <div class="alert alert-info">ℹ Tras <strong>3 intentos fallidos</strong>, la cuenta se bloquea temporalmente. Solo el <strong>Contador General</strong> puede aprobar operaciones.</div>
+      <div class="card"><div class="card-hdr"><div class="card-title">👥 Usuarios del Sistema</div></div><div class="card-body-0" style="overflow-x:auto;"><table class="tbl">
+        <thead><tr><th>Usuario</th><th>Rol </th><th>Estado</th><th>Intentos </th><th>Último acceso </th><th>Acciones</th></tr></thead>
+        <tbody></tbody>
+      </table></div></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">🔐 Matriz de Permisos por Rol</div></div>
+	  <div class="card-body-0" style="overflow-x:auto;"><table class="tbl">
+	  <thead><tr>
+	  <th style="color:#e8c87a;">Funcionalidad</th>
+	  <th style="text-align:center;color:#e8c87a;">Admin</th>
+	  <th style="text-align:center;color:#e8c87a;">Contador</th>
+	  <th style="text-align:center;color:#e8c87a;">Auditor</th>
+	  <th style="text-align:center;color:#e8c87a;">Personal</th>
+	  </tr></thead>
+		<tbody>
+		<tr><td>Asientos Contables</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">👁</td><td style="text-align:center">✅</td></tr>
+		<tr><td>Aprobar Operaciones</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td></tr>
+		<tr><td>Reportes Financieros</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">👁</td><td style="text-align:center">❌</td></tr>
+		<tr><td>Gestión Usuarios</td><td style="text-align:center">✅</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td></tr>
+		<tr><td>Auditoría</td><td style="text-align:center">✅</td><td style="text-align:center">✅</td><td style="text-align:center">👁</td><td style="text-align:center">❌</td></tr>
+		<tr><td>Configuración</td><td style="text-align:center">✅</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td><td style="text-align:center">❌</td></tr>
+		</tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+      <div id="sub-auditoria" class="admin-sub">
+  <div class="sec-hdr"><div><div class="sec-title">Registro de Auditoría</div><div class="sec-sub">HISTORIAL DETALLADO DE CAMBIOS CON VALORES ANTERIORES Y NUEVOS</div></div><div class="btns-row"><button class="btn-outline btn-sm" onclick="exportAuditCSV()">📊 Exportar CSV</button></div></div>
+  <div class="card"><div class="card-hdr"><div class="card-title">🔍 Filtros de Auditoría</div></div><div class="card-body">
+    <div class="form-grid">
+      <div class="fg"><label>Usuario</label><select id="aud-filtro-usuario"><option>Todos los usuarios</option></select></div>
+      <div class="fg"><label>Fecha Desde</label><input type="date" id="aud-filtro-desde" value="2026-01-01"/></div>
+      <div class="fg"><label>Fecha Hasta</label>	  <input type="date" id="aud-filtro-hasta" value="2026-12-31"/>
+</div>
+	  <div class="fg"><label>Tipo de Acción</label>
+	  <select id="aud-filtro-accion">
+	    <option>Todas</option>
+	    <option>Login exitoso</option>
+	    <option>Creación</option>
+	    <option>Edición</option>
+	    <option>Anulación</option>
+	    <option>Duplicación</option>
+	    <option>Emisión</option>
+	    <option>Actualización</option>
+	  </select></div>
+    </div>
+    <button class="btn-gold btn-sm" style="margin-top:12px;" onclick="aplicarFiltrosAuditoria()">Aplicar Filtros</button>
+  </div></div>
+  <div class="card"><div class="card-hdr"><div class="card-title">📋 Historial de Cambios</div></div>   <div class="card-body-0" style="overflow-x:auto;"><table class="tbl">
+  
+  
+    <thead><tr><th>Fecha/Hora</th><th>Usuario </th><th>Acción</th><th>Objeto</th><th>Valor Anterior </th><th>Valor Nuevo </th></tr></thead>
+    <tbody></tbody>
+  </table></div></div>
+</div>
+      <div id="sub-respaldos" class="admin-sub">
+  <div class="sec-hdr"><div><div class="sec-title">Respaldos y Base de Datos</div><div class="sec-sub">COPIAS DE SEGURIDAD AUTOMÁTICAS</div></div><button class="btn-gold btn-sm" onclick="crearRespaldo(this)">+ Respaldo Manual</button></div>
+  <div class="two-col">
+    <div>
+      <div class="alert alert-success">✓ Respaldo <strong>diario automático</strong> programado a las 02:00 AM.</div>
+      <div class="card"><div class="card-hdr"><div class="card-title">⚙ Programación de Respaldos</div></div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:8px;">
+            <div><div style="font-size:13px;">Respaldo Diario</div><div style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">02:00 AM · Retención: 30 días</div></div>
+            <label class="sw"><input type="checkbox" checked onchange="toggleRespaldo('Diario', this.checked)"/><span class="slider"></span></label>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:8px;">
+            <div><div style="font-size:13px;">Respaldo Semanal</div><div style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">Domingos 03:00 AM · Retención: 3 meses</div></div>
+            <label class="sw"><input type="checkbox" checked onchange="toggleRespaldo('Semanal', this.checked)"/><span class="slider"></span></label>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(45,212,191,.06);border:1px solid rgba(45,212,191,.2);border-radius:8px;">
+            <div><div style="font-size:13px;">Respaldo Mensual</div><div style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">Día 1 · 04:00 AM · Retención: 1 año</div></div>
+           <label class="sw"><input type="checkbox" checked onchange="toggleRespaldo('Mensual', this.checked)"/><span class="slider"></span></label>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <div class="card"><div class="card-hdr"><div class="card-title">📋 Historial de Respaldos</div></div><div class="card-body-0" style="overflow-x:auto;"><table class="tbl">
+      <thead><tr><th>Fecha/Hora</th><th>Tipo</th><th>Tamaño</th><th>Usuario </th><th>Estado</th><th>Restaurar </th></tr></thead>
+      <tbody></tbody>
+    </table></div></div>
+  </div>
+</div>
+      <div id="sub-configuracion" class="admin-sub">
+  <div class="sec-hdr"><div><div class="sec-title">Configuración del Sistema</div><div class="sec-sub">PARÁMETROS GENERALES DEL SISTEMA FINANTEL</div></div><button class="btn-gold btn-sm" onclick="guardarConfig()">💾 Guardar Cambios</button></div>
+  <div class="two-col">
+    <div class="card"><div class="card-hdr"><div class="card-title">🏢 Datos de la Empresa</div></div><div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="fg"><label>Razón Social</label><input type="text" value="FINANTEL S.A.C."/></div>
+        <div class="fg"><label>RUC</label><input type="text" value="20110300971"/></div>
+        <div class="fg"><label>Dirección</label><input type="text" value="Av. Bolivia 258, Lima 15001"/></div>
+        <div class="fg"><label>Email</label><input type="email" value="informes@finantel.pe"/></div>
+        <div class="fg"><label>Página Web</label><input type="text" value="https://www.finantel.pe/"/></div>
+        <div class="fg"><label>Moneda Principal</label><select><option selected>PEN — Sol Peruano</option><option>USD — Dólar</option></select></div>
+      </div>
+    </div></div>
+    <div>
+      <div class="card" style="margin-bottom:16px;"><div class="card-hdr"><div class="card-title">⚙ Parámetros Contables</div></div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="fg"><label>Período Fiscal</label><select><option>Enero — Diciembre</option><option>Trimestral</option></select></div>
+          <div class="fg"><label>Método Depreciación</label><select><option>Línea Recta</option><option>Saldo Decreciente</option></select></div>
+          <div class="fg"><label>Tasa IR (%)</label><input type="number" value="29.5"/></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Aprobación doble en asientos grandes</span><label class="sw"><input type="checkbox" checked onchange="showToast('Parámetro actualizado','info')"/><span class="slider"></span></label></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Alertas automáticas activas </span><label class="sw"><input type="checkbox" checked/><span class="slider"></span></label></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">OCR automático en adjuntos</span><label class="sw"><input type="checkbox" checked/><span class="slider"></span></label></div>
+        </div>
+      </div></div>
+      <div class="card"><div class="card-hdr"><div class="card-title">🔔 Notificaciones</div></div><div class="card-body">
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Alertas por email</span><label class="sw"><input type="checkbox" checked/><span class="slider"></span></label></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">Alertas vencimientos </span><label class="sw"><input type="checkbox" checked/><span class="slider"></span></label></div>
+          <div class="fg" style="margin-top:4px;"><label>Días previos alerta vencimiento</label><input type="number" value="7"/></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+</div>
+      <div id="sub-ayuda" class="admin-sub">
+  <div class="sec-hdr"><div><div class="sec-title">Centro de Ayuda</div><div class="sec-sub">DOCUMENTACIÓN Y ASISTENCIA PARA USUARIOS</div></div></div>
+  <div class="three-col">
+    <div class="card"><div class="card-hdr"><div class="card-title">📚 Guías Rápidas</div></div><div class="card-body"><div style="display:flex;flex-direction:column;gap:8px;">
+      <button class="btn-outline" style="text-align:left;" onclick="showToast('Guía: Cómo registrar un asiento contable','info')">📝 Cómo registrar asientos</button>
+      <button class="btn-outline" style="text-align:left;" onclick="showToast('Guía: Exportar reportes en PDF/Excel','info')">📊 Exportar reportes</button>
+      <button class="btn-outline" style="text-align:left;" onclick="showToast('Guía: Gestión de usuarios y roles','info')">👥 Gestión de usuarios</button>
+      <button class="btn-outline" style="text-align:left;" onclick="showToast('Guía: Importar datos desde Excel','info')">📥 Importar datos</button>
+      <button class="btn-outline" style="text-align:left;" onclick="showToast('Guía: Respaldos y restauración','info')">💾 Respaldos</button>
+    </div></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">❓ Preguntas Frecuentes</div></div><div class="card-body"><div style="display:flex;flex-direction:column;gap:10px;font-size:12.5px;">
+      <div style="border-bottom:1px solid var(--border);padding-bottom:8px;"><div style="color:var(--gold-light);margin-bottom:4px;">¿Por qué se bloquea mi cuenta?</div><div style="color:var(--muted);">Tras 3 intentos fallidos , la cuenta se bloquea. Contacta al Administrador.</div></div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:8px;"><div style="color:var(--gold-light);margin-bottom:4px;">¿Puedo editar un asiento cerrado?</div><div style="color:var(--muted);">No . Los periodos cerrados bloquean la edición para garantizar integridad.</div></div>
+      <div><div style="color:var(--gold-light);margin-bottom:4px;">¿Cómo actualizo el tipo de cambio?</div><div style="color:var(--muted);">Se actualiza automáticamente cada día a las 9 AM desde la API de la SBS .</div></div>
+    </div></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">📞 Soporte Técnico</div></div><div class="card-body">
+      <div style="text-align:center;padding:10px 0;">
+        <div style="font-size:32px;margin-bottom:12px;">🛠</div>
+        <div style="font-size:14px;color:var(--text);margin-bottom:6px;">Soporte FINANTEL</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Lunes a Viernes 8:00–18:00</div>
+        <button class="btn-gold" style="width:100%;margin-bottom:8px;" onclick="abrirTicketSoporte()">📮 Crear Ticket</button>
+        <button class="btn-outline" style="width:100%;" onclick="showToast('Chat en vivo iniciado — un agente se conectará en breve','info')">💬 Chat en vivo</button>
+        <div style="margin-top:12px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">contador@finantel.pe<br>+51 1 234-5678</div>
+      </div>
+    </div></div>
+  </div>
+</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
