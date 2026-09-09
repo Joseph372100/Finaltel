@@ -1,0 +1,60 @@
+cm se conecta entre el login al servicio
+
+token dura 24 hrs y se actualiza al poner star en el STS
+                                        
+     "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmcmVkaUBmaW5hbnRlbC5wZSIsInJvbCI6IkNvbnRhZG9yIEdlbmVyYWwiLCJpYXQiOjE3NzkzMDYyMTYsImV4cCI6MTc3OTM5MjYxNn0.Udoy85O6LM5Lq9wSl3MgahnKMo_bZyLpkRFpyPYPOY8"
+-------------------
+apikey rsa512
+keytool -genkeypair -alias finantel -keyalg RSA -keysize 4096 -storetype PKCS12 -keystore finantel.p12 -validity 3650 -storepass finantel123
+---------------
+
+
+PATCH para editarlo parcialmente
+y POST para crear un nuevo registro
+--------------
+PATCH http://localhost:8080/inactivar-asiento/1
+POST http://localhost:8080/duplicar-asiento/1
+------------------------------------------- faltan los de abajo
+POST http://localhost:8080/copia-seguridad
+POST http://localhost:8080/restaurar-bd/1
+POST http://localhost:8080/ocr/leer
+POST http://localhost:8080/conciliacion/comparar
+POST http://localhost:8080/historial-cambios
+POST http://localhost:8080/importar-excel
+--------------
+Microsoft Windows [Versión 10.0.26200.8457]
+(c) Microsoft Corporation. Todos los derechos reservados.
+
+C:\Users\Diego>keytool -genkeypair -alias finantel -keyalg RSA -keysize 4096 -storetype PKCS12 -keystore finantel.p12 -validity 3650 -storepass finantel123 -dname "CN=finantel, OU=finantel, O=finantelsac, L=lima, ST=lima, C=pe"
+Generando par de claves RSA de 4,096 bits para certificado autofirmado (SHA384withRSA) con una validez de 3,650 días
+        para: CN=finantel, OU=finantel, O=finantelsac, L=lima, ST=lima, C=pe
+
+C:\Users\Diego>dir C:\Users\Diego\finantel.p12
+ El volumen de la unidad C es Windows-SSD
+ El número de serie del volumen es: F2E0-5576
+
+ Directorio de C:\Users\Diego
+
+21/05/2026  22:56             4,396 finantel.p12
+               1 archivos          4,396 bytes
+               0 dirs  27,611,193,344 bytes libres
+
+C:\Users\Diego>copy C:\Users\Diego\finantel.p12 "C:\Users\Diego\Downloads\finantel\finantel\src\main\resources\finantel.p12"
+        1 archivo(s) copiado(s).
+
+C:\Users\Diego>dir "C:\Users\Diego\Downloads\finantel\finantel\src\main\resources"
+ El volumen de la unidad C es Windows-SSD
+ El número de serie del volumen es: F2E0-5576
+
+ Directorio de C:\Users\Diego\Downloads\finantel\finantel\src\main\resources
+
+21/05/2026  22:57    <DIR>          .
+21/05/2026  18:18    <DIR>          ..
+21/05/2026  22:58               666 application.properties
+21/05/2026  22:56             4,396 finantel.p12
+21/05/2026  18:18    <DIR>          static
+21/05/2026  18:18    <DIR>          templates
+               2 archivos          5,062 bytes
+               4 dirs  27,603,320,832 bytes libres
+
+C:\Users\Diego>

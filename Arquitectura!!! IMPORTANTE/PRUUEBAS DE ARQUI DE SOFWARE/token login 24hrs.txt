@@ -1,0 +1,20 @@
+cm se conecta entre el login al servicio
+
+token dura 24 hrs y se actualiza al poner star en el STS
+                                        
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJmcmVkaUBmaW5hbnRlbC5wZSIsInJvbCI6IkNvbnRhZG9yIEdlbmVyYWwiLCJpYXQiOjE3NzkyNDUyMTQsImV4cCI6MTc3OTMzMTYxNH0.WgHgO-oYHyxRpxNEagUNjr_1niPwd2BEZc6NMqwVwBY",
+
+
+PATCH para editarlo parcialmente
+y POST para crear un nuevo registro
+--------------
+PATCH http://localhost:8080/inactivar-asiento/1
+POST http://localhost:8080/duplicar-asiento/1
+------------------------------------------- faltan los de abajo
+POST http://localhost:8080/copia-seguridad
+POST http://localhost:8080/restaurar-bd/1
+POST http://localhost:8080/ocr/leer
+POST http://localhost:8080/conciliacion/comparar
+POST http://localhost:8080/historial-cambios
+POST http://localhost:8080/importar-excel
+--------------
